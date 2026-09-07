@@ -448,14 +448,14 @@ const Auth = {
                 </div>
               </div>
 
-              <!-- QR Code Zalo / Quét mã liên hệ -->
+              <!-- QR Code / Quét mã góp ý hệ thống -->
               <div class="pt-2.5 border-t border-slate-700/60 flex flex-col items-center justify-center text-center">
-                <div class="text-[10px] uppercase font-bold text-slate-400 mb-1.5 flex items-center gap-1">
+                <div class="text-[10px] uppercase font-bold text-emerald-400 mb-1.5 flex items-center gap-1">
                   <i class="ph-bold ph-qr-code text-emerald-400 text-xs"></i>
-                  <span>Quét mã Zalo liên hệ</span>
+                  <span>Quét mã QR để góp ý về hệ thống</span>
                 </div>
                 <div class="p-1.5 bg-white rounded-xl shadow-lg border border-emerald-500/40 inline-flex items-center justify-center">
-                  <img src="/images/contact-qr.jpg" alt="Mã QR Zalo Nguyễn Giang Ngọc" class="w-32 h-32 sm:w-36 sm:h-36 object-contain rounded-lg" />
+                  <img src="/images/contact-qr.jpg" alt="Mã QR Góp ý về hệ thống" class="w-32 h-32 sm:w-36 sm:h-36 object-contain rounded-lg" />
                 </div>
                 <span class="text-[9px] sm:text-[10px] text-emerald-300/80 mt-1 font-medium">Mở Zalo hoặc Camera điện thoại để quét</span>
               </div>
