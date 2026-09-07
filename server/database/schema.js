@@ -13,6 +13,16 @@ async function execTable(sql) {
   await db.runAsync(finalSql);
 }
 
+async function safeAddColumn(table, column, typeDef) {
+  try {
+    if (db.isPostgres) {
+      await db.runAsync(`ALTER TABLE ${table} ADD COLUMN IF NOT EXISTS ${column} ${typeDef}`);
+    } else {
+      await db.runAsync(`ALTER TABLE ${table} ADD COLUMN ${column} ${typeDef}`);
+    }
+  } catch (e) {}
+}
+
 async function initDB() {
   if (!db.isPostgres) {
     try { await db.runAsync('PRAGMA foreign_keys = ON'); } catch (e) {}
@@ -52,11 +62,11 @@ async function initDB() {
     )
   `);
 
-  try { await db.runAsync(`ALTER TABLE users ADD COLUMN birth_date DATE`); } catch (e) {}
-  try { await db.runAsync(`ALTER TABLE users ADD COLUMN gender TEXT DEFAULT 'Nam'`); } catch (e) {}
-  try { await db.runAsync(`ALTER TABLE users ADD COLUMN qualification TEXT DEFAULT 'Đại học'`); } catch (e) {}
-  try { await db.runAsync(`ALTER TABLE users ADD COLUMN current_session_id TEXT`); } catch (e) {}
-  try { await db.runAsync(`ALTER TABLE users ADD COLUMN employee_code TEXT`); } catch (e) {}
+  await safeAddColumn('users', 'birth_date', 'DATE');
+  await safeAddColumn('users', 'gender', "TEXT DEFAULT 'Nam'");
+  await safeAddColumn('users', 'qualification', "TEXT DEFAULT 'Đại học'");
+  await safeAddColumn('users', 'current_session_id', 'TEXT');
+  await safeAddColumn('users', 'employee_code', 'TEXT');
 
   // 3. Tasks table
   await execTable(`
@@ -182,16 +192,16 @@ async function initDB() {
     )
   `);
 
-  try { await db.runAsync(`ALTER TABLE personal_work_logs ADD COLUMN task_name TEXT`); } catch (e) {}
-  try { await db.runAsync(`ALTER TABLE personal_work_logs ADD COLUMN start_time TEXT`); } catch (e) {}
-  try { await db.runAsync(`ALTER TABLE personal_work_logs ADD COLUMN end_time TEXT`); } catch (e) {}
-  try { await db.runAsync(`ALTER TABLE personal_work_logs ADD COLUMN status TEXT DEFAULT 'in_progress'`); } catch (e) {}
-  try { await db.runAsync(`ALTER TABLE personal_work_logs ADD COLUMN auto_complete INTEGER DEFAULT 1`); } catch (e) {}
-  try { await db.runAsync(`ALTER TABLE personal_work_logs ADD COLUMN completed_at DATETIME`); } catch (e) {}
-  try { await db.runAsync(`ALTER TABLE personal_work_logs ADD COLUMN approval_status TEXT DEFAULT 'pending'`); } catch (e) {}
-  try { await db.runAsync(`ALTER TABLE personal_work_logs ADD COLUMN approved_by INTEGER`); } catch (e) {}
-  try { await db.runAsync(`ALTER TABLE personal_work_logs ADD COLUMN approved_at DATETIME`); } catch (e) {}
-  try { await db.runAsync(`ALTER TABLE personal_work_logs ADD COLUMN approval_comment TEXT`); } catch (e) {}
+  await safeAddColumn('personal_work_logs', 'task_name', 'TEXT');
+  await safeAddColumn('personal_work_logs', 'start_time', 'TEXT');
+  await safeAddColumn('personal_work_logs', 'end_time', 'TEXT');
+  await safeAddColumn('personal_work_logs', 'status', "TEXT DEFAULT 'in_progress'");
+  await safeAddColumn('personal_work_logs', 'auto_complete', 'INTEGER DEFAULT 1');
+  await safeAddColumn('personal_work_logs', 'completed_at', 'DATETIME');
+  await safeAddColumn('personal_work_logs', 'approval_status', "TEXT DEFAULT 'pending'");
+  await safeAddColumn('personal_work_logs', 'approved_by', 'INTEGER');
+  await safeAddColumn('personal_work_logs', 'approved_at', 'DATETIME');
+  await safeAddColumn('personal_work_logs', 'approval_comment', 'TEXT');
 
   // 10. Messages table
   await execTable(`
@@ -209,7 +219,7 @@ async function initDB() {
     )
   `);
 
-  try { await db.runAsync(`ALTER TABLE messages ADD COLUMN is_recalled INTEGER DEFAULT 0`); } catch (e) {}
+  await safeAddColumn('messages', 'is_recalled', 'INTEGER DEFAULT 0');
 
   try {
     await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_msg_sender ON messages(sender_id)`);

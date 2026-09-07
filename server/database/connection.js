@@ -14,9 +14,13 @@ if (databaseUrl) {
     connectionString: databaseUrl,
   };
 
-  // Enable SSL if connecting to remote host (Render, AWS, Supabase, Neon)
-  if (!databaseUrl.includes('localhost') && !databaseUrl.includes('127.0.0.1')) {
+  const isInternalRender = databaseUrl.includes('@dpg-') && !databaseUrl.includes('.render.com');
+  const isLocal = databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1');
+
+  if (!isLocal && !isInternalRender && (databaseUrl.includes('.render.com') || databaseUrl.includes('sslmode=require') || databaseUrl.includes('supabase') || databaseUrl.includes('neon.tech'))) {
     poolConfig.ssl = { rejectUnauthorized: false };
+  } else {
+    poolConfig.ssl = false;
   }
 
   const pool = new Pool(poolConfig);
