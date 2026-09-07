@@ -32,6 +32,8 @@ const Auth = {
       this.renderLoginPage();
       return false;
     }
+    this.startInactivityTimer();
+    this.startSessionHeartbeat();
     return true;
   },
 
@@ -250,6 +252,33 @@ const Auth = {
     }
   },
 
+  sessionHeartbeatTimer: null,
+
+  startSessionHeartbeat() {
+    this.stopSessionHeartbeat();
+    if (!this.token || !this.user) return;
+
+    // Check session validity every 3 seconds to instantly kick out old session if logged in on another device
+    this.sessionHeartbeatTimer = setInterval(async () => {
+      if (!this.token || !this.user) {
+        this.stopSessionHeartbeat();
+        return;
+      }
+      try {
+        await apiFetch('/api/auth/me');
+      } catch (err) {
+        // apiFetch automatically triggers Auth.logout('session_terminated') on SESSION_TAKEN_OVER
+      }
+    }, 3000);
+  },
+
+  stopSessionHeartbeat() {
+    if (this.sessionHeartbeatTimer) {
+      clearInterval(this.sessionHeartbeatTimer);
+      this.sessionHeartbeatTimer = null;
+    }
+  },
+
   setSession(token, user) {
     this.token = token;
     this.user = user;
@@ -261,10 +290,12 @@ const Auth = {
       sessionStorage.setItem('wt_admin_user_id', user.id);
     }
     this.startInactivityTimer();
+    this.startSessionHeartbeat();
   },
 
   logout(reason = null) {
     this.stopInactivityTimer();
+    this.stopSessionHeartbeat();
     localStorage.removeItem('wt_token');
     localStorage.removeItem('wt_user');
     sessionStorage.removeItem('wt_is_admin_session');
@@ -673,13 +704,13 @@ async function apiFetch(url, options = {}) {
     const code = (typeof data === 'object' && data) ? data.code : null;
     const errorMsg = (typeof data === 'object' && data.error) ? data.error : (typeof data === 'string' && data ? data : response.statusText);
 
-    if (code === 'SESSION_TERMINATED') {
+    if (code === 'SESSION_TERMINATED' || code === 'SESSION_TAKEN_OVER' || (typeof errorMsg === 'string' && errorMsg.includes('đăng nhập ở thiết bị khác'))) {
       Auth.logout('session_terminated');
       throw new Error(errorMsg || 'Tài khoản của bạn đã được đăng nhập từ một thiết bị khác.');
-    } else if (code === 'ACCOUNT_LOCKED') {
+    } else if (code === 'ACCOUNT_LOCKED' || (typeof errorMsg === 'string' && errorMsg.includes('bị khóa'))) {
       Auth.logout('locked');
       throw new Error(errorMsg || 'Tài khoản đã bị khóa.');
-    } else if (response.status === 401 && (code === 'TOKEN_EXPIRED' || code === 'NO_TOKEN' || code === 'USER_NOT_FOUND')) {
+    } else if (response.status === 401) {
       Auth.logout('expired');
       throw new Error('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.');
     }
