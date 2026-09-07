@@ -404,7 +404,7 @@ const Auth = {
                   <i class="ph-bold ph-headset text-base"></i>
                 </div>
                 <div>
-                  <h4 class="text-xs font-black text-white uppercase tracking-tight">Hỗ trợ Kỹ thuật & Quản trị</h4>
+                  <h4 class="text-xs font-black text-white uppercase tracking-tight">Hỗ trợ kỹ thuật</h4>
                   <span class="text-[10px] text-emerald-400 font-medium">Trường Đào tạo cán bộ Agribank</span>
                 </div>
               </div>
@@ -415,13 +415,13 @@ const Auth = {
 
             <!-- Contact Box -->
             <div class="bg-slate-800/90 border border-emerald-500/30 rounded-xl p-3.5 text-left space-y-2.5">
-              <!-- Name -->
+              <!-- Name / Liên hệ -->
               <div class="flex items-center gap-2.5">
                 <div class="w-7 h-7 rounded-lg bg-emerald-950 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
                   <i class="ph-bold ph-user text-sm"></i>
                 </div>
                 <div>
-                  <div class="text-[10px] uppercase font-bold text-slate-400">Phụ trách kỹ thuật</div>
+                  <div class="text-[10px] uppercase font-bold text-slate-400">Liên hệ</div>
                   <div class="text-xs sm:text-sm font-extrabold text-white">Nguyễn Giang Ngọc</div>
                 </div>
               </div>
@@ -447,11 +447,23 @@ const Auth = {
                   <div class="text-xs sm:text-sm font-semibold text-emerald-300 truncate font-mono">ngocnguyenagb@gmail.com</div>
                 </div>
               </div>
+
+              <!-- QR Code Zalo / Quét mã liên hệ -->
+              <div class="pt-2.5 border-t border-slate-700/60 flex flex-col items-center justify-center text-center">
+                <div class="text-[10px] uppercase font-bold text-slate-400 mb-1.5 flex items-center gap-1">
+                  <i class="ph-bold ph-qr-code text-emerald-400 text-xs"></i>
+                  <span>Quét mã Zalo liên hệ</span>
+                </div>
+                <div class="p-1.5 bg-white rounded-xl shadow-lg border border-emerald-500/40 inline-flex items-center justify-center">
+                  <img src="/images/contact-qr.jpg" alt="Mã QR Zalo Nguyễn Giang Ngọc" class="w-32 h-32 sm:w-36 sm:h-36 object-contain rounded-lg" />
+                </div>
+                <span class="text-[9px] sm:text-[10px] text-emerald-300/80 mt-1 font-medium">Mở Zalo hoặc Camera điện thoại để quét</span>
+              </div>
             </div>
 
             <!-- Developer Attribution Note (Formatted as 2 Lines) -->
             <div class="pt-1.5 border-t border-slate-800/80">
-              <div class="p-3 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-xs font-medium flex items-center justify-center gap-2.5 shadow-inner text-center">
+              <div class="p-2.5 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-xs font-medium flex items-center justify-center gap-2 shadow-inner text-center">
                 <i class="ph-bold ph-sparkle text-amber-300 text-base shrink-0"></i>
                 <div class="leading-relaxed text-slate-200 text-xs">
                   <div>Chương trình này được phát triển bởi</div>
