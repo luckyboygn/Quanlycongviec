@@ -490,7 +490,7 @@ const App = {
           </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4 flex flex-col justify-between">
             <div class="space-y-3">
               <div class="flex items-center justify-between">
@@ -529,26 +529,6 @@ const App = {
             <button onclick="ExportModule.exportTasksToExcel()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-blue-600/20 transition flex items-center justify-center gap-2">
               <i class="ph-bold ph-file-arrow-down text-base"></i> Tải Báo Cáo (.xlsx)
             </button>
-          </div>
-
-          <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4 flex flex-col justify-between">
-            <div class="space-y-3">
-              <div class="flex items-center justify-between">
-                <div class="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 flex items-center justify-center text-xl font-bold">
-                  <i class="ph-bold ph-file-doc"></i>
-                </div>
-                <span class="text-[10px] uppercase font-extrabold px-2.5 py-0.5 rounded-md bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400 border border-purple-200 dark:border-purple-800">
-                  Tài liệu
-                </span>
-              </div>
-              <div>
-                <h3 class="font-bold text-slate-800 dark:text-white">3. Tài Liệu Phân Quyền</h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Bảng mô tả chức năng, ma trận phân quyền & tài khoản mẫu.</p>
-              </div>
-            </div>
-            <a href="/api/download-word-doc" download class="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-purple-600/20 transition flex items-center justify-center gap-2">
-              <i class="ph-bold ph-file-doc text-base"></i> Tải File Word (.docx)
-            </a>
           </div>
         </div>
       </div>
