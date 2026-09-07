@@ -8,7 +8,7 @@ const ChatRepository = {
              d.name as department_name, d.code as department_code
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
-      WHERE u.id != ? AND u.status = 'active'
+      WHERE u.id != ? AND (u.status = 'active' OR u.status IS NULL OR u.status != 'locked')
     `, [currentUserId]);
 
     for (const c of contacts) {

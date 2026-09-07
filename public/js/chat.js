@@ -42,33 +42,54 @@ const Chat = {
     }
   },
 
+  contactFilterTab: 'all', // 'all' | 'online' | 'recent'
+  contactsPollTimer: null,
+
   async renderView(container) {
+    if (this.contactsPollTimer) clearInterval(this.contactsPollTimer);
+
     container.innerHTML = `
       <div class="h-[calc(100vh-140px)] min-h-[580px] bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col md:flex-row">
         <!-- Left Sidebar: Contacts & Channels -->
         <div class="w-full md:w-80 lg:w-96 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700 flex flex-col bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
           
-          <!-- Search Header -->
-          <div class="p-4 border-b border-slate-200 dark:border-slate-700 space-y-3">
+          <!-- Search & Filter Header -->
+          <div class="p-4 border-b border-slate-200 dark:border-slate-700 space-y-2.5">
             <div class="flex items-center justify-between">
               <h2 class="text-base font-extrabold text-slate-800 dark:text-white flex items-center gap-2">
                 <i class="ph-bold ph-chats-circle text-emerald-600 text-xl"></i> Chat nội bộ
               </h2>
-              <span class="text-[10px] bg-slate-100 dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 font-bold px-2 py-0.5 rounded-full flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span id="chat-online-count-badge">${this.contacts.filter(c => c.is_online).length} trực tuyến</span>
+              <span id="chat-online-count-badge" class="text-[10px] bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>0 trực tuyến</span>
               </span>
             </div>
             
             <div class="relative">
               <i class="ph-bold ph-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-              <input type="text" oninput="Chat.filterContacts(this.value)" placeholder="Tìm kiếm cán bộ, phòng ban..." class="w-full pl-8 pr-3 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs">
+              <input type="text" id="chat-search-input" oninput="Chat.filterContacts(this.value)" placeholder="Tìm kiếm cán bộ, phòng ban, chức vụ..." class="w-full pl-8 pr-3 py-2 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 shadow-2xs">
+            </div>
+
+            <!-- Fast Segment Filter Tabs -->
+            <div class="flex items-center bg-slate-100 dark:bg-slate-700/80 p-1 rounded-xl text-[11px] font-bold shadow-inner">
+              <button onclick="Chat.setFilterTab('all')" id="btn-chat-tab-all" class="flex-1 py-1 rounded-lg transition text-center ${this.contactFilterTab === 'all' ? 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800'}">
+                👥 Danh bạ (<span id="chat-tab-all-count">0</span>)
+              </button>
+              <button onclick="Chat.setFilterTab('online')" id="btn-chat-tab-online" class="flex-1 py-1 rounded-lg transition text-center ${this.contactFilterTab === 'online' ? 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800'}">
+                🟢 Online (<span id="chat-tab-online-count">0</span>)
+              </button>
+              <button onclick="Chat.setFilterTab('recent')" id="btn-chat-tab-recent" class="flex-1 py-1 rounded-lg transition text-center ${this.contactFilterTab === 'recent' ? 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-800'}">
+                💬 Gần đây
+              </button>
             </div>
           </div>
 
           <!-- Contacts & Channels List -->
           <div id="chat-contacts-list" class="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-            <div class="p-4 text-center text-slate-400 text-xs">Đang tải danh bạ...</div>
+            <div class="p-6 text-center text-slate-400 text-xs flex flex-col items-center justify-center gap-2">
+              <i class="ph ph-spinner animate-spin text-2xl text-emerald-600"></i>
+              <span>Đang tải danh bạ toàn thể cán bộ...</span>
+            </div>
           </div>
         </div>
 
@@ -86,6 +107,17 @@ const Chat = {
     `;
 
     await this.loadContacts();
+
+    // Auto poll contacts to update live online status and unread counters every 4 seconds
+    this.contactsPollTimer = setInterval(() => {
+      if (document.getElementById('chat-contacts-list')) {
+        this.loadContacts(true);
+      } else {
+        clearInterval(this.contactsPollTimer);
+        this.contactsPollTimer = null;
+      }
+    }, 4000);
+
     const urlParams = new URLSearchParams(window.location.search);
     const chatContactParam = urlParams.get('chat_contact');
     if (chatContactParam) {
@@ -96,16 +128,65 @@ const Chat = {
     }
   },
 
-  async loadContacts() {
+  setFilterTab(tab) {
+    this.contactFilterTab = tab;
+    const tabs = ['all', 'online', 'recent'];
+    tabs.forEach(t => {
+      const btn = document.getElementById(`btn-chat-tab-${t}`);
+      if (btn) {
+        if (t === tab) {
+          btn.className = 'flex-1 py-1 rounded-lg transition text-center bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-400 shadow-xs font-black';
+        } else {
+          btn.className = 'flex-1 py-1 rounded-lg transition text-center text-slate-600 dark:text-slate-400 hover:text-slate-800 font-bold';
+        }
+      }
+    });
+
+    const searchVal = document.getElementById('chat-search-input')?.value || '';
+    if (searchVal) {
+      this.filterContacts(searchVal);
+    } else {
+      this.renderContactsList();
+    }
+  },
+
+  async loadContacts(silent = false) {
     try {
       const res = await apiFetch('/api/chat/contacts');
       this.contacts = res.contacts || [];
       this.generalChannel = res.general_channel || { id: 'general', name: '🏛️ Kênh Toàn Trường (Chung)' };
       this.departmentChannel = res.department_channel || null;
       this.departmentChannels = res.department_channels || [];
-      this.renderContactsList();
+
+      // Update online count & tab counts
+      const onlineCount = this.contacts.filter(c => c.is_online).length;
+      const onlineBadge = document.getElementById('chat-online-count-badge');
+      if (onlineBadge) {
+        onlineBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span>${onlineCount} trực tuyến</span>`;
+      }
+
+      const allCountEl = document.getElementById('chat-tab-all-count');
+      if (allCountEl) allCountEl.innerText = this.contacts.length;
+
+      const onlineCountEl = document.getElementById('chat-tab-online-count');
+      if (onlineCountEl) onlineCountEl.innerText = onlineCount;
+
+      // Also update active contact online status if currently chatting 1-1
+      if (this.activeContact && typeof this.activeContactId === 'number') {
+        const found = this.contacts.find(c => c.id === this.activeContactId);
+        if (found) {
+          this.activeContact.is_online = found.is_online;
+        }
+      }
+
+      const searchVal = document.getElementById('chat-search-input')?.value || '';
+      if (searchVal) {
+        this.filterContacts(searchVal);
+      } else {
+        this.renderContactsList();
+      }
     } catch (e) {
-      console.error('Load contacts error:', e);
+      if (!silent) console.error('Load contacts error:', e);
     }
   },
 
@@ -148,124 +229,160 @@ const Chat = {
     const listEl = document.getElementById('chat-contacts-list');
     if (!listEl) return;
 
-    const list = filtered || this.contacts;
+    let list = filtered || this.contacts;
+    const isSearching = filtered !== null;
     const isGeneralActive = this.activeContactId === 'general';
 
-    // Tách riêng: Nhóm có tin nhắn gần đây (nổi lên đầu) & Nhóm danh bạ còn lại
-    const recentContacts = list.filter(c => c.last_message || c.unread_count > 0);
-    const otherContacts = list.filter(c => !c.last_message && (!c.unread_count || c.unread_count === 0));
+    // Apply Filter Tab if not currently searching with text
+    if (!isSearching) {
+      if (this.contactFilterTab === 'online') {
+        list = this.contacts.filter(c => c.is_online);
+      } else if (this.contactFilterTab === 'recent') {
+        list = this.contacts.filter(c => c.last_message || c.unread_count > 0);
+      }
+    }
 
     let html = `
-      <!-- KÊNH CHUNG & KÊNH PHÒNG BAN -->
-      <div class="space-y-1 mb-2">
-        <!-- 1. Kênh Toàn Trường (Chung) -->
-        <button onclick="Chat.selectContact('general')" class="w-full text-left p-3 rounded-2xl transition flex items-center justify-between ${isGeneralActive ? 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 shadow-2xs' : 'hover:bg-slate-100 dark:hover:bg-slate-700/60'}">
-          <div class="flex items-center gap-3 min-w-0 flex-1">
-            <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white font-bold flex items-center justify-center text-lg shrink-0 shadow-2xs">
-              🏛️
-            </div>
-            <div class="min-w-0 flex-1">
-              <div class="font-bold text-slate-800 dark:text-white text-xs truncate flex items-center justify-between gap-1">
-                <span class="flex items-center gap-1 truncate">
-                  <span>Kênh Toàn Trường</span>
-                  <span class="text-[9px] bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-300 px-1 py-0.2 rounded font-semibold">Chung</span>
-                </span>
-                <span class="text-[10px] text-slate-400 font-normal shrink-0">
-                  ${this.formatTime(this.generalChannel?.last_message_time)}
-                </span>
-              </div>
-              <div class="text-[11px] text-slate-400 truncate mt-0.5 font-normal">
-                ${this.generalChannel?.last_message || 'Thông tin trao đổi chung toàn trường...'}
-              </div>
-            </div>
-          </div>
-        </button>
-
-        <!-- 2. Kênh Phòng Làm Việc (Nội bộ phòng) -->
-        ${this.departmentChannel ? `
-          <button onclick="Chat.selectContact('${this.departmentChannel.id}')" class="w-full text-left p-3 rounded-2xl transition flex items-center justify-between ${this.activeContactId === this.departmentChannel.id ? 'bg-blue-50 dark:bg-blue-950/40 border border-blue-300 dark:border-blue-800 shadow-2xs' : 'hover:bg-slate-100 dark:hover:bg-slate-700/60'}">
+      <!-- KÊNH CHUNG & KÊNH PHÒNG BAN (Luôn ghim ở trên đầu) -->
+      ${!isSearching ? `
+        <div class="space-y-1 mb-2">
+          <!-- 1. Kênh Toàn Trường (Chung) -->
+          <button onclick="Chat.selectContact('general')" class="w-full text-left p-3 rounded-2xl transition flex items-center justify-between ${isGeneralActive ? 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 shadow-2xs' : 'hover:bg-slate-100 dark:hover:bg-slate-700/60'}">
             <div class="flex items-center gap-3 min-w-0 flex-1">
-              <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-lg shrink-0 shadow-2xs">
-                🏢
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white font-bold flex items-center justify-center text-lg shrink-0 shadow-2xs">
+                🏛️
               </div>
               <div class="min-w-0 flex-1">
                 <div class="font-bold text-slate-800 dark:text-white text-xs truncate flex items-center justify-between gap-1">
                   <span class="flex items-center gap-1 truncate">
-                    <span>${this.departmentChannel.name.replace('🏢 ', '')}</span>
-                    <span class="text-[9px] bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 px-1 py-0.2 rounded font-semibold">Phòng</span>
+                    <span>Kênh Toàn Trường</span>
+                    <span class="text-[9px] bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-300 px-1 py-0.2 rounded font-semibold">Chung</span>
                   </span>
                   <span class="text-[10px] text-slate-400 font-normal shrink-0">
-                    ${this.formatTime(this.departmentChannel?.last_message_time)}
+                    ${this.formatTime(this.generalChannel?.last_message_time)}
                   </span>
                 </div>
                 <div class="text-[11px] text-slate-400 truncate mt-0.5 font-normal">
-                  ${this.departmentChannel?.last_message || 'Trao đổi nghiệp vụ nội bộ phòng...'}
+                  ${this.generalChannel?.last_message || 'Thông tin trao đổi chung toàn trường...'}
                 </div>
               </div>
             </div>
           </button>
-        ` : ''}
 
-        <!-- 3. Kênh các phòng ban khác (Dành cho Ban Giám đốc / Admin) -->
-        ${(Auth.isDirector() || Auth.isAdmin()) && this.departmentChannels && this.departmentChannels.length > 0 ? `
-          <div class="pt-2 pb-1 px-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-            <i class="ph-bold ph-buildings"></i> Kênh các phòng khác (${this.departmentChannels.filter(d => d.id !== this.departmentChannel?.id).length})
-          </div>
-          ${this.departmentChannels.filter(d => d.id !== this.departmentChannel?.id).map(d => `
-            <button onclick="Chat.selectContact('${d.id}')" class="w-full text-left p-2.5 rounded-2xl transition flex items-center justify-between ${this.activeContactId === d.id ? 'bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-300 dark:border-indigo-800 shadow-2xs' : 'hover:bg-slate-100 dark:hover:bg-slate-700/60'}">
-              <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                <div class="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold flex items-center justify-center text-xs shrink-0">
+          <!-- 2. Kênh Phòng Làm Việc (Nội bộ phòng) -->
+          ${this.departmentChannel ? `
+            <button onclick="Chat.selectContact('${this.departmentChannel.id}')" class="w-full text-left p-3 rounded-2xl transition flex items-center justify-between ${this.activeContactId === this.departmentChannel.id ? 'bg-blue-50 dark:bg-blue-950/40 border border-blue-300 dark:border-blue-800 shadow-2xs' : 'hover:bg-slate-100 dark:hover:bg-slate-700/60'}">
+              <div class="flex items-center gap-3 min-w-0 flex-1">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold flex items-center justify-center text-lg shrink-0 shadow-2xs">
                   🏢
                 </div>
                 <div class="min-w-0 flex-1">
                   <div class="font-bold text-slate-800 dark:text-white text-xs truncate flex items-center justify-between gap-1">
-                    <span class="truncate">${d.name.replace('🏢 ', '')}</span>
-                    <span class="text-[9px] text-slate-400">${this.formatTime(d.last_message_time)}</span>
+                    <span class="flex items-center gap-1 truncate">
+                      <span>${this.departmentChannel.name.replace('🏢 ', '')}</span>
+                      <span class="text-[9px] bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300 px-1 py-0.2 rounded font-semibold">Phòng</span>
+                    </span>
+                    <span class="text-[10px] text-slate-400 font-normal shrink-0">
+                      ${this.formatTime(this.departmentChannel?.last_message_time)}
+                    </span>
                   </div>
-                  <div class="text-[10px] text-slate-400 truncate mt-0.5">${d.last_message || d.description}</div>
+                  <div class="text-[11px] text-slate-400 truncate mt-0.5 font-normal">
+                    ${this.departmentChannel?.last_message || 'Trao đổi nghiệp vụ nội bộ phòng...'}
+                  </div>
                 </div>
               </div>
             </button>
-          `).join('')}
-        ` : ''}
-      </div>
+          ` : ''}
+
+          <!-- 3. Kênh các phòng ban khác (Dành cho Ban Giám đốc / Admin) -->
+          ${(Auth.isDirector() || Auth.isAdmin()) && this.departmentChannels && this.departmentChannels.length > 0 ? `
+            <div class="pt-2 pb-1 px-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1">
+              <i class="ph-bold ph-buildings"></i> Kênh các phòng khác (${this.departmentChannels.filter(d => d.id !== this.departmentChannel?.id).length})
+            </div>
+            ${this.departmentChannels.filter(d => d.id !== this.departmentChannel?.id).map(d => `
+              <button onclick="Chat.selectContact('${d.id}')" class="w-full text-left p-2.5 rounded-2xl transition flex items-center justify-between ${this.activeContactId === d.id ? 'bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-300 dark:border-indigo-800 shadow-2xs' : 'hover:bg-slate-100 dark:hover:bg-slate-700/60'}">
+                <div class="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div class="w-8 h-8 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold flex items-center justify-center text-xs shrink-0">
+                    🏢
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <div class="font-bold text-slate-800 dark:text-white text-xs truncate flex items-center justify-between gap-1">
+                      <span class="truncate">${d.name.replace('🏢 ', '')}</span>
+                      <span class="text-[9px] text-slate-400">${this.formatTime(d.last_message_time)}</span>
+                    </div>
+                    <div class="text-[10px] text-slate-400 truncate mt-0.5">${d.last_message || d.description}</div>
+                  </div>
+                </div>
+              </button>
+            `).join('')}
+          ` : ''}
+        </div>
+      ` : ''}
     `;
 
-    // 1. NHÓM HỘI THOẠI GẦN ĐÂY (NGƯỜI GỬI MỚI NHẤT NỔI LÊN ĐẦU TIÊN)
-    if (recentContacts.length > 0) {
-      html += `
-        <div class="pt-3 pb-1 px-2 flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 border-t border-slate-100 dark:border-slate-700/60">
-          <span class="flex items-center gap-1">
-            <i class="ph-bold ph-chat-circle-dots"></i> Hội thoại gần đây
-          </span>
-          <span class="bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.2 rounded-full font-black">${recentContacts.length}</span>
-        </div>
-        <div class="space-y-1">
-          ${recentContacts.map(c => this.renderContactItem(c)).join('')}
-        </div>
-      `;
-    }
+    // DANH BẠ CÁN BỘ
+    if (this.contactFilterTab === 'all' && !isSearching) {
+      // Group by Department for full institute directory
+      const deptsMap = {};
+      list.forEach(c => {
+        let deptName = c.department_name;
+        if (!deptName || c.role === 'director' || c.role === 'admin' || (c.position && c.position.toLowerCase().includes('giám đốc'))) {
+          deptName = '🏛️ Ban Giám đốc & Quản trị';
+        } else if (!deptName.startsWith('Phòng') && !deptName.startsWith('🏛️')) {
+          deptName = '🏢 Phòng ' + deptName;
+        } else if (!deptName.startsWith('🏛️')) {
+          deptName = '🏢 ' + deptName;
+        }
 
-    // 2. NHÓM DANH BẠ CÁN BỘ KHÁC
-    if (otherContacts.length > 0) {
-      html += `
-        <div class="pt-3 pb-1 px-2 flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-slate-400 border-t border-slate-100 dark:border-slate-700/60">
-          <span class="flex items-center gap-1">
-            <i class="ph-bold ph-users"></i> ${recentContacts.length > 0 ? 'Cán bộ khác' : 'Danh bạ cán bộ'}
-          </span>
-          <span>${otherContacts.length} người</span>
-        </div>
-        <div class="space-y-1">
-          ${otherContacts.map(c => this.renderContactItem(c)).join('')}
-        </div>
-      `;
+        if (!deptsMap[deptName]) deptsMap[deptName] = [];
+        deptsMap[deptName].push(c);
+      });
+
+      // Render each department group
+      const deptKeys = Object.keys(deptsMap).sort((a, b) => {
+        if (a.includes('Ban Giám đốc')) return -1;
+        if (b.includes('Ban Giám đốc')) return 1;
+        return a.localeCompare(b);
+      });
+
+      deptKeys.forEach(dKey => {
+        const members = deptsMap[dKey];
+        const onlineInDept = members.filter(m => m.is_online).length;
+
+        html += `
+          <div class="pt-3 pb-1 px-2.5 flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wide text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-700/60 bg-slate-100/40 dark:bg-slate-700/20 rounded-xl my-1">
+            <span class="flex items-center gap-1.5 truncate">
+              <span>${dKey}</span>
+            </span>
+            <span class="text-[10px] text-slate-400 font-bold shrink-0">
+              ${members.length} CB ${onlineInDept > 0 ? `<span class="text-emerald-600 dark:text-emerald-400 font-extrabold">(${onlineInDept} online)</span>` : ''}
+            </span>
+          </div>
+          <div class="space-y-1">
+            ${members.map(c => this.renderContactItem(c)).join('')}
+          </div>
+        `;
+      });
+    } else {
+      // Flat list for Online tab / Recent tab / Search results
+      if (list.length > 0) {
+        const titleLabel = isSearching ? `Kết quả tìm kiếm (${list.length})` : (this.contactFilterTab === 'online' ? `Cán bộ đang trực tuyến (${list.length})` : `Hội thoại gần đây (${list.length})`);
+        html += `
+          <div class="pt-3 pb-1 px-2.5 flex items-center justify-between text-[11px] font-extrabold uppercase tracking-wide text-emerald-700 dark:text-emerald-400 border-t border-slate-100 dark:border-slate-700/60">
+            <span>${titleLabel}</span>
+          </div>
+          <div class="space-y-1">
+            ${list.map(c => this.renderContactItem(c)).join('')}
+          </div>
+        `;
+      }
     }
 
     if (list.length === 0) {
       html += `
-        <div class="p-6 text-center text-slate-400 text-xs">
-          <i class="ph-bold ph-magnifying-glass text-2xl mb-1 text-slate-300"></i>
-          <p>Không tìm thấy cán bộ phù hợp</p>
+        <div class="p-8 text-center text-slate-400 text-xs">
+          <i class="ph-bold ph-user-circle text-3xl mb-1 text-slate-300"></i>
+          <p class="font-semibold">${this.contactFilterTab === 'online' ? 'Hiện không có cán bộ nào đang online' : 'Không có cán bộ phù hợp'}</p>
         </div>
       `;
     }
@@ -275,31 +392,47 @@ const Chat = {
 
   renderContactItem(c) {
     const isActive = this.activeContactId === c.id;
-    const roleTag = c.role === 'director' ? 'BGD' : c.role === 'admin' ? 'Admin' : c.role === 'manager' ? 'Trưởng phòng' : 'Nhân viên';
+    const roleTag = c.role === 'director' ? 'BGD' : c.role === 'admin' ? 'Admin' : c.role === 'manager' ? (c.position || 'Trưởng phòng') : (c.position || 'Nhân viên');
     const tagColor = c.role === 'director' ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300' : c.role === 'admin' ? 'bg-purple-100 text-purple-900 dark:bg-purple-950/60 dark:text-purple-300' : c.role === 'manager' ? 'bg-blue-100 text-blue-900 dark:bg-blue-950/60 dark:text-blue-300' : 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-300';
     const hasUnread = c.unread_count > 0;
 
     return `
       <button onclick="Chat.selectContact(${c.id})" class="w-full text-left p-2.5 rounded-2xl transition flex items-center justify-between ${isActive ? 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 shadow-2xs' : 'hover:bg-slate-100 dark:hover:bg-slate-700/60'}">
         <div class="flex items-center gap-2.5 min-w-0 flex-1">
+          <!-- Avatar with Initial & Status Dot -->
           <div class="relative shrink-0">
-            <div class="w-9 h-9 rounded-xl ${c.role === 'director' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : c.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300' : c.role === 'manager' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'} font-bold flex items-center justify-center text-xs">
+            <div class="w-9 h-9 rounded-xl ${c.role === 'director' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : c.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300' : c.role === 'manager' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'} font-bold flex items-center justify-center text-xs shadow-2xs">
               ${c.full_name.split(' ').pop()[0]}
             </div>
             ${c.is_online ? `
-              <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-800 rounded-full ring-1 ring-emerald-400/40" title="Đang trực tuyến"></span>
+              <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-800 rounded-full ring-1 ring-emerald-400/40 shadow-xs animate-pulse" title="Đang trực tuyến"></span>
             ` : ''}
           </div>
+
+          <!-- Name & Online Indicator next to name -->
           <div class="min-w-0 flex-1 pr-1">
-            <div class="font-bold text-slate-800 dark:text-white text-xs truncate flex items-center justify-between gap-1">
-              <span class="truncate ${hasUnread ? 'text-emerald-700 dark:text-emerald-400 font-extrabold' : ''}">${c.full_name}</span>
+            <div class="font-bold text-slate-800 dark:text-white text-xs truncate flex items-center justify-between gap-1.5">
+              <div class="flex items-center gap-1.5 truncate min-w-0">
+                <span class="truncate ${hasUnread ? 'text-emerald-700 dark:text-emerald-400 font-extrabold' : ''}">${c.full_name}</span>
+                ${c.is_online ? `
+                  <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-black bg-emerald-100 dark:bg-emerald-950/90 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shrink-0" title="Đang trực tuyến">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Online
+                  </span>
+                ` : `
+                  <span class="inline-flex items-center gap-1 px-1 py-0.2 rounded-full text-[9px] font-medium text-slate-400 shrink-0" title="Ngoại tuyến">
+                    <span class="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600"></span> Offline
+                  </span>
+                `}
+              </div>
               ${c.last_message_time ? `<span class="text-[9px] text-slate-400 font-normal shrink-0">${this.formatTime(c.last_message_time)}</span>` : ''}
             </div>
-            <div class="text-[10px] ${hasUnread ? 'text-slate-700 dark:text-slate-200 font-bold' : 'text-slate-400'} truncate mt-0.5">
-              ${c.last_message ? (c.last_sender_id === Auth.user.id ? `Bạn: ${c.last_message}` : c.last_message) : (c.position || c.department_name || roleTag)}
+
+            <div class="text-[10px] ${hasUnread ? 'text-slate-700 dark:text-slate-200 font-bold' : 'text-slate-400'} truncate mt-0.5 flex items-center justify-between">
+              <span class="truncate">${c.last_message ? (c.last_sender_id === Auth.user.id ? `Bạn: ${c.last_message}` : c.last_message) : (c.position ? `${c.position} • ${c.department_name || ''}` : (c.department_name || roleTag))}</span>
             </div>
           </div>
         </div>
+
         <div class="shrink-0 pl-1 flex items-center gap-1">
           ${hasUnread ? `
             <span class="px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white shadow-2xs animate-pulse">
@@ -307,7 +440,7 @@ const Chat = {
             </span>
           ` : `
             <span class="text-[9px] px-1.5 py-0.5 rounded font-bold ${tagColor}">
-              ${roleTag}
+              ${c.department_code || roleTag}
             </span>
           `}
         </div>
