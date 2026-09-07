@@ -272,12 +272,13 @@ async function initDB() {
         // 2. Users
         if (seed.users && seed.users.length > 0) {
           for (const u of seed.users) {
+            const birthDate = (u.birth_date && String(u.birth_date).trim() !== '') ? String(u.birth_date).trim() : null;
             await db.runAsync(
               `INSERT INTO users (id, employee_code, username, password, full_name, email, phone, role, department_id, position, birth_date, gender, qualification, avatar, status)
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               [
                 u.id, u.employee_code || null, u.username, u.password, u.full_name, u.email || null, u.phone || null,
-                u.role, u.department_id || null, u.position || null, u.birth_date || null, u.gender || 'Nam',
+                u.role, u.department_id || null, u.position || null, birthDate, u.gender || 'Nam',
                 u.qualification || 'Đại học', u.avatar || null, u.status || 'active'
               ]
             );

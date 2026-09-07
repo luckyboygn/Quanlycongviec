@@ -36,25 +36,38 @@ if (databaseUrl) {
     let pgSql = convertSqlToPg(sql);
     const isInsert = /^\s*INSERT\s+INTO/i.test(pgSql);
     const hasReturning = /RETURNING/i.test(pgSql);
-    if (isInsert && !hasReturning) {
+    const isAssignees = /task_assignees/i.test(pgSql);
+    if (isInsert && !hasReturning && !isAssignees) {
       pgSql += ' RETURNING id';
     }
-    const res = await pool.query(pgSql, params);
-    return {
-      lastID: res.rows && res.rows[0] ? res.rows[0].id : null,
-      changes: res.rowCount
-    };
+    const cleanParams = params.map(p => (p === '' ? null : p));
+    try {
+      const res = await pool.query(pgSql, cleanParams);
+      return {
+        lastID: res.rows && res.rows[0] ? res.rows[0].id : null,
+        changes: res.rowCount
+      };
+    } catch (err) {
+      if (err.message && err.message.includes('column "id" does not exist')) {
+        const fallbackSql = convertSqlToPg(sql);
+        const res = await pool.query(fallbackSql, cleanParams);
+        return { lastID: null, changes: res.rowCount };
+      }
+      throw err;
+    }
   };
 
   db.getAsync = async function (sql, params = []) {
     const pgSql = convertSqlToPg(sql);
-    const res = await pool.query(pgSql, params);
+    const cleanParams = params.map(p => (p === '' ? null : p));
+    const res = await pool.query(pgSql, cleanParams);
     return res.rows[0] || null;
   };
 
   db.allAsync = async function (sql, params = []) {
     const pgSql = convertSqlToPg(sql);
-    const res = await pool.query(pgSql, params);
+    const cleanParams = params.map(p => (p === '' ? null : p));
+    const res = await pool.query(pgSql, cleanParams);
     return res.rows || [];
   };
 
