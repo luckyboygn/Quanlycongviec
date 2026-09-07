@@ -7,7 +7,14 @@ const { logActivity } = require('../utils/logger');
 
 const AuthService = {
   async login(username, password, clientIp) {
-    const user = await UserRepository.findByUsername(username);
+    if (!username || !password) {
+      throw new Error('Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu');
+    }
+    const cleanUsername = String(username).trim();
+    let user = await UserRepository.findByUsername(cleanUsername);
+    if (!user) {
+      user = await UserRepository.findByEmployeeCode(cleanUsername);
+    }
     if (!user) {
       throw new Error('Tên đăng nhập hoặc mật khẩu không đúng');
     }

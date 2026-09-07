@@ -35,22 +35,25 @@ const UserRepository = {
   },
 
   async findByUsername(username) {
+    if (!username) return null;
+    const cleanUsername = String(username).trim();
     return await db.getAsync(`
       SELECT u.*, d.name as department_name, d.code as department_code
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
-      WHERE u.username = ?
-    `, [username]);
+      WHERE LOWER(u.username) = LOWER(?)
+    `, [cleanUsername]);
   },
 
   async findByEmployeeCode(employeeCode) {
     if (!employeeCode) return null;
+    const cleanCode = String(employeeCode).trim();
     return await db.getAsync(`
       SELECT u.*, d.name as department_name, d.code as department_code
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
-      WHERE u.employee_code = ?
-    `, [employeeCode]);
+      WHERE LOWER(u.employee_code) = LOWER(?)
+    `, [cleanCode]);
   },
 
   async getNextEmployeeCode() {

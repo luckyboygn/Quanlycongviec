@@ -19,7 +19,8 @@ const UserController = {
         return res.status(400).json({ error: 'Vui lòng nhập đầy đủ các trường bắt buộc' });
       }
 
-      const existing = await UserRepository.findByUsername(username);
+      const cleanUsername = String(username).trim().toLowerCase();
+      const existing = await UserRepository.findByUsername(cleanUsername);
       if (existing) {
         return res.status(400).json({ error: 'Tên đăng nhập đã tồn tại trên hệ thống' });
       }
@@ -27,12 +28,12 @@ const UserController = {
       const hashedPassword = await bcrypt.hash(password, 10);
       const resId = await UserRepository.create({
         employee_code: employee_code ? employee_code.trim() : null,
-        username, password: hashedPassword, full_name, email, phone,
+        username: cleanUsername, password: hashedPassword, full_name, email, phone,
         role, department_id, position, birth_date, gender, qualification
       });
 
       const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-      await logActivity(req.user.id, req.user.full_name, 'CREATE_USER', 'users', resId.lastID, `Tạo tài khoản: ${full_name} (@${username})`, clientIp);
+      await logActivity(req.user.id, req.user.full_name, 'CREATE_USER', 'users', resId.lastID, `Tạo tài khoản: ${full_name} (@${cleanUsername})`, clientIp);
 
       const newUser = await UserRepository.findById(resId.lastID);
       res.status(201).json(newUser);
@@ -68,7 +69,7 @@ const UserController = {
         if (department_id !== undefined) updateFields.department_id = department_id || null;
         if (role !== undefined) updateFields.role = role;
         if (status !== undefined) updateFields.status = status;
-        if (username !== undefined && username.trim()) updateFields.username = username.trim();
+        if (username !== undefined && username.trim()) updateFields.username = username.trim().toLowerCase();
         if (password && password.trim()) {
           updateFields.password = await bcrypt.hash(password.trim(), 10);
         }
@@ -196,12 +197,13 @@ const UserController = {
         password: await bcrypt.hash(new_password, 10)
       };
 
-      if (username && username.trim() && username.trim() !== targetUser.username) {
-        const existing = await UserRepository.findByUsername(username.trim());
+      if (username && username.trim() && username.trim().toLowerCase() !== targetUser.username.toLowerCase()) {
+        const cleanNewUsername = username.trim().toLowerCase();
+        const existing = await UserRepository.findByUsername(cleanNewUsername);
         if (existing && existing.id !== targetId) {
           return res.status(400).json({ error: 'Tên đăng nhập mới đã tồn tại trên hệ thống' });
         }
-        updateFields.username = username.trim();
+        updateFields.username = cleanNewUsername;
       }
 
       await UserRepository.update(targetId, updateFields);
