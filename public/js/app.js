@@ -273,6 +273,93 @@ const App = {
           </div>
           ` : ''}
 
+          <!-- Contact / Tech Support Button (Next to Dark Mode Toggle) -->
+          <div class="relative">
+            <button onclick="App.toggleContactPopup(event)" id="btn-header-contact-toggle" class="p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-600 transition flex items-center gap-1.5 text-xs font-bold shadow-2xs cursor-pointer" title="Hỗ trợ kỹ thuật & Liên hệ">
+              <i class="ph-bold ph-phone text-emerald-600 dark:text-emerald-400 text-base"></i>
+              <span class="hidden sm:inline">Liên hệ</span>
+            </button>
+
+            <!-- Floating Popover Card -->
+            <div id="header-contact-popover" class="invisible opacity-0 scale-95 translate-y-2 pointer-events-none origin-top-right transition-all duration-300 ease-out absolute right-0 top-full mt-2 w-80 sm:w-88 max-w-[calc(100vw-24px)] bg-slate-900/95 dark:bg-slate-900/98 border border-emerald-500/50 rounded-2xl p-4 sm:p-5 shadow-2xl shadow-emerald-950/80 backdrop-blur-xl space-y-3.5 z-50 text-center">
+              
+              <!-- Top Row with Title & Close button -->
+              <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                <div class="flex items-center gap-2 text-left">
+                  <div class="w-8 h-8 rounded-lg bg-emerald-900/60 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                    <i class="ph-bold ph-headset text-base"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-xs font-black text-white uppercase tracking-tight">Hỗ trợ kỹ thuật</h4>
+                    <span class="text-[10px] text-emerald-400 font-medium">Trường Đào tạo cán bộ Agribank</span>
+                  </div>
+                </div>
+                <button type="button" onclick="App.closeContactPopup(event)" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition">
+                  <i class="ph-bold ph-x text-sm"></i>
+                </button>
+              </div>
+
+              <!-- Contact Info Box -->
+              <div class="bg-slate-800/90 border border-emerald-500/30 rounded-xl p-3.5 text-left space-y-2.5">
+                <!-- Name -->
+                <div class="flex items-center gap-2.5">
+                  <div class="w-7 h-7 rounded-lg bg-emerald-950 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                    <i class="ph-bold ph-user text-sm"></i>
+                  </div>
+                  <div>
+                    <div class="text-[10px] uppercase font-bold text-slate-400">Liên hệ</div>
+                    <div class="text-xs sm:text-sm font-extrabold text-white">Nguyễn Giang Ngọc</div>
+                  </div>
+                </div>
+
+                <!-- Phone / Zalo -->
+                <div class="flex items-center gap-2.5 pt-2 border-t border-slate-700/60">
+                  <div class="w-7 h-7 rounded-lg bg-emerald-950 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                    <i class="ph-bold ph-phone text-sm"></i>
+                  </div>
+                  <div class="flex-1">
+                    <div class="text-[10px] uppercase font-bold text-slate-400">Điện thoại / Zalo</div>
+                    <div class="text-sm sm:text-base font-black text-amber-300 font-mono tracking-wide">0975.142.242</div>
+                  </div>
+                </div>
+
+                <!-- Email -->
+                <div class="flex items-center gap-2.5 pt-2 border-t border-slate-700/60">
+                  <div class="w-7 h-7 rounded-lg bg-emerald-950 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0">
+                    <i class="ph-bold ph-envelope text-sm"></i>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-[10px] uppercase font-bold text-slate-400">Email</div>
+                    <div class="text-xs sm:text-sm font-semibold text-emerald-300 truncate font-mono">ngocnguyenagb@gmail.com</div>
+                  </div>
+                </div>
+
+                <!-- QR Code -->
+                <div class="pt-2.5 border-t border-slate-700/60 flex flex-col items-center justify-center text-center">
+                  <div class="text-[10px] uppercase font-bold text-emerald-400 mb-1.5 flex items-center gap-1">
+                    <i class="ph-bold ph-qr-code text-emerald-400 text-xs"></i>
+                    <span>Quét mã QR để góp ý về hệ thống</span>
+                  </div>
+                  <div class="p-1.5 bg-white rounded-xl shadow-lg border border-emerald-500/40 inline-flex items-center justify-center">
+                    <img src="/images/contact-qr.jpg" alt="Mã QR Góp ý về hệ thống" class="w-32 h-32 sm:w-36 sm:h-36 object-contain rounded-lg" />
+                  </div>
+                  <span class="text-[9px] sm:text-[10px] text-emerald-300/80 mt-1 font-medium">Mở Zalo hoặc Camera điện thoại để quét</span>
+                </div>
+              </div>
+
+              <!-- Developer Attribution Note -->
+              <div class="pt-1.5 border-t border-slate-800/80">
+                <div class="p-2.5 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-emerald-300 text-xs font-medium flex items-center justify-center gap-2 shadow-inner text-center">
+                  <i class="ph-bold ph-sparkle text-amber-300 text-base shrink-0"></i>
+                  <div class="leading-relaxed text-slate-200 text-xs">
+                    <div>Chương trình này được phát triển bởi</div>
+                    <div class="font-bold text-amber-300">Nguyễn Giang Ngọc - ĐTCB Agribank</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Dark Mode Toggle -->
           <button onclick="App.toggleDarkMode()" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600 transition" title="Giao diện Sáng/Tối">
             <i class="ph-bold ph-moon dark:hidden text-lg"></i>
@@ -932,6 +1019,54 @@ const App = {
       }
     } catch (err) {
       alert('Lỗi cập nhật: ' + err.message);
+    }
+  },
+
+  toggleContactPopup(e) {
+    if (e) e.stopPropagation();
+    const pop = document.getElementById('header-contact-popover');
+    if (!pop) return;
+    const isHidden = pop.classList.contains('invisible');
+    if (isHidden) {
+      this.openContactPopup();
+    } else {
+      this.closeContactPopup();
+    }
+  },
+
+  openContactPopup() {
+    const pop = document.getElementById('header-contact-popover');
+    if (!pop) return;
+    pop.classList.remove('invisible', 'opacity-0', 'scale-95', 'translate-y-2', 'pointer-events-none');
+    pop.classList.add('opacity-100', 'scale-100', 'translate-y-0');
+
+    if (window._headerCloseContactOnOutside) {
+      document.removeEventListener('click', window._headerCloseContactOnOutside);
+    }
+    const closeOnOutside = (e) => {
+      const popover = document.getElementById('header-contact-popover');
+      const toggleBtn = document.getElementById('btn-header-contact-toggle');
+      if (popover && !popover.contains(e.target) && toggleBtn && !toggleBtn.contains(e.target)) {
+        this.closeContactPopup();
+        document.removeEventListener('click', closeOnOutside);
+        window._headerCloseContactOnOutside = null;
+      }
+    };
+    window._headerCloseContactOnOutside = closeOnOutside;
+    setTimeout(() => {
+      document.addEventListener('click', closeOnOutside);
+    }, 50);
+  },
+
+  closeContactPopup(e) {
+    if (e) e.stopPropagation();
+    const pop = document.getElementById('header-contact-popover');
+    if (!pop) return;
+    pop.classList.remove('opacity-100', 'scale-100', 'translate-y-0');
+    pop.classList.add('invisible', 'opacity-0', 'scale-95', 'translate-y-2', 'pointer-events-none');
+    if (window._headerCloseContactOnOutside) {
+      document.removeEventListener('click', window._headerCloseContactOnOutside);
+      window._headerCloseContactOnOutside = null;
     }
   }
 };
