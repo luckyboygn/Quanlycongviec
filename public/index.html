@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hệ thống Theo dõi & Kê Khai Công Việc - Trường Đào tạo cán bộ Agribank</title>
+  <link rel="icon" type="image/png" href="/images/agribank-logo.png">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Phosphor Icons -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- SheetJS (xlsx) for Excel Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="h-full flex flex-col antialiased text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-900 transition-colors duration-200">
+
+  <!-- Top App Navigation Header -->
+  <header id="app-header" class="sticky top-0 z-40 bg-white/90 dark:bg-slate-800/90 glass-header border-b border-slate-200 dark:border-slate-700 shadow-sm"></header>
+
+  <!-- Main Layout Container -->
+  <div class="flex-1 flex overflow-hidden max-w-7xl w-full mx-auto">
+    <!-- Desktop & Mobile Sidebar Navigation -->
+    <aside id="app-sidebar-container" class="hidden lg:flex w-64 flex-col bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 overflow-y-auto">
+      <div id="app-sidebar" class="flex-1 flex flex-col justify-between"></div>
+    </aside>
+
+    <!-- Main View Content Area -->
+    <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div id="main-content" class="max-w-6xl mx-auto">
+        <div class="flex items-center justify-center py-20 text-slate-400">
+          <i class="ph ph-spinner animate-spin text-4xl mr-3 text-emerald-600"></i>
+          <span class="text-base font-semibold">Đang khởi chạy hệ thống Trường Đào tạo cán bộ Agribank...</span>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Dynamic Modal Overlay Container -->
+  <div id="modal-container"></div>
+
+  <!-- Toast Notification Alert Box -->
+  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Core JavaScript Modules -->
+  <script src="/js/auth.js"></script>
+  <script src="/js/export.js"></script>
+  <script src="/js/dashboard.js"></script>
+  <script src="/js/tasks.js"></script>
+  <script src="/js/personalLogs.js"></script>
+  <script src="/js/calendar.js"></script>
+  <script src="/js/chat.js"></script>
+  <script src="/js/admin.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
