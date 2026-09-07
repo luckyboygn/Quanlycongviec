@@ -1,4 +1,5 @@
 const db = require('../database/connection');
+const PresenceTracker = require('../utils/presence');
 
 const ChatRepository = {
   async getContacts(currentUserId) {
@@ -11,6 +12,8 @@ const ChatRepository = {
     `, [currentUserId]);
 
     for (const c of contacts) {
+      c.is_online = PresenceTracker.isOnline(c.id);
+
       const lastMsg = await db.getAsync(`
         SELECT content, created_at, sender_id
         FROM messages

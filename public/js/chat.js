@@ -54,8 +54,9 @@ const Chat = {
               <h2 class="text-base font-extrabold text-slate-800 dark:text-white flex items-center gap-2">
                 <i class="ph-bold ph-chats-circle text-emerald-600 text-xl"></i> Chat nội bộ
               </h2>
-              <span class="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-bold px-2 py-0.5 rounded-full">
-                Trực tuyến
+              <span class="text-[10px] bg-slate-100 dark:bg-slate-700/80 text-slate-600 dark:text-slate-300 font-bold px-2 py-0.5 rounded-full flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span id="chat-online-count-badge">${this.contacts.filter(c => c.is_online).length} trực tuyến</span>
               </span>
             </div>
             
@@ -285,7 +286,9 @@ const Chat = {
             <div class="w-9 h-9 rounded-xl ${c.role === 'director' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : c.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300' : c.role === 'manager' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'} font-bold flex items-center justify-center text-xs">
               ${c.full_name.split(' ').pop()[0]}
             </div>
-            <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-800 rounded-full"></span>
+            ${c.is_online ? `
+              <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-800 rounded-full ring-1 ring-emerald-400/40" title="Đang trực tuyến"></span>
+            ` : ''}
           </div>
           <div class="min-w-0 flex-1 pr-1">
             <div class="font-bold text-slate-800 dark:text-white text-xs truncate flex items-center justify-between gap-1">
@@ -365,7 +368,8 @@ const Chat = {
           <div>
             <h3 class="font-extrabold text-slate-800 dark:text-white text-sm flex items-center gap-1.5">
               <span>${isGeneral ? 'Kênh Toàn Trường (Chung)' : isDept ? (c.name || 'Kênh Phòng làm việc') : c.full_name}</span>
-              ${isGeneral ? '<span class="text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-1.5 py-0.2 rounded font-semibold">Chung</span>' : isDept ? '<span class="text-[10px] bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 px-1.5 py-0.2 rounded font-semibold">Nội bộ phòng</span>' : `<span class="text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-1.5 py-0.2 rounded font-semibold">${c.position || c.role}</span>`}
+              ${isGeneral ? '<span class="text-[10px] bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 px-1.5 py-0.2 rounded font-semibold">Chung</span>' : isDept ? '<span class="text-[10px] bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 px-1.5 py-0.2 rounded font-semibold">Nội bộ phòng</span>' : `<span class="text-[10px] bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300 px-1.5 py-0.2 rounded font-semibold">${c.position || c.role}</span>`}
+              ${!isGeneral && !isDept ? (c.is_online ? '<span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Trực tuyến</span>' : '<span class="text-[10px] text-slate-400 font-normal">Ngoại tuyến</span>') : ''}
             </h3>
             <p class="text-[11px] text-slate-400">
               ${isGeneral ? 'Trao đổi, chia sẻ thông tin công tác nội bộ toàn thể cán bộ' : isDept ? (c.description || 'Trao đổi, thảo luận nghiệp vụ nội bộ phòng') : (c.department_name || 'Ban Giám đốc')}

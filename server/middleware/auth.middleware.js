@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config/constants');
 const db = require('../database/connection');
+const PresenceTracker = require('../utils/presence');
 
 async function authenticateToken(req, res, next) {
   const authHeader = req.headers['authorization'];
@@ -34,9 +35,11 @@ async function authenticateToken(req, res, next) {
       console.error('Session check error:', dbErr);
     }
 
+    PresenceTracker.touch(user.id);
     req.user = user;
     next();
   });
 }
 
 module.exports = authenticateToken;
+
