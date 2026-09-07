@@ -6,7 +6,7 @@ const NewsRepository = {
       SELECT n.*, u.full_name as author_full_name, u.role as author_role
       FROM news n
       LEFT JOIN users u ON n.author_id = u.id
-      ORDER BY n.is_pinned DESC, COALESCE(n.news_date, substr(n.created_at, 1, 10)) DESC, n.created_at DESC
+      ORDER BY n.is_pinned DESC, n.news_date DESC, n.created_at DESC
     `);
   },
 
