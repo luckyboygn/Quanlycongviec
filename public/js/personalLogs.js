@@ -6,11 +6,35 @@ const PersonalLogs = {
   filterActivity: '',
   searchQuery: '',
   targetUserId: null,
+  targetSupervisorId: null,
   currentStatusTab: 'in_progress', // 'in_progress' | 'completed'
   approvalFilter: 'all', // 'all' | 'pending' | 'approved' | 'rejected'
   cachedTasks: [],
   cachedMembers: [],
   cachedLogs: [],
+
+  getSupervisorOptions(selectedId = null) {
+    const leaders = (this.cachedMembers || []).filter(u => ['manager', 'director', 'admin'].includes(u.role));
+    const list = leaders.length > 0 ? leaders : (this.cachedMembers || []);
+
+    let html = `<option value="">-- Không gắn lãnh đạo / Chưa chỉ định --</option>`;
+    
+    list.forEach(u => {
+      let isSel = false;
+      if (selectedId !== null && selectedId !== undefined && selectedId !== '') {
+        isSel = (u.id == selectedId);
+      } else {
+        // Mặc định chọn Trưởng phòng của phòng mình
+        isSel = (Auth.user && u.department_id == Auth.user.department_id && u.role === 'manager' && u.id !== Auth.user.id);
+      }
+      
+      const roleName = u.position || (u.role === 'manager' ? 'Trưởng phòng' : (u.role === 'director' ? 'Ban Giám đốc' : 'Quản trị'));
+      const deptName = u.department_name || 'Agribank';
+      html += `<option value="${u.id}" ${isSel ? 'selected' : ''}>👔 ${u.full_name} (${roleName} - ${deptName})</option>`;
+    });
+
+    return html;
+  },
 
   async render() {
     if (!this.fromDate || !this.toDate) {
@@ -21,7 +45,7 @@ const PersonalLogs = {
       this.toDate = lastDay.toISOString().split('T')[0];
     }
 
-    if (!this.targetUserId) {
+    if (!this.targetUserId && !this.targetSupervisorId) {
       this.targetUserId = Auth.isStaff() ? Auth.user.id : 'all';
     }
 
@@ -38,7 +62,7 @@ const PersonalLogs = {
               Bản Kê Khai Nhật Ký Công Việc Cá Nhân
             </h1>
             <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Ghi nhận chi tiết thời gian, nội dung, địa điểm và kết quả thực hiện phục vụ theo dõi, xác nhận giờ công và đánh giá KPI.
+              Ghi nhận chi tiết thời gian, nội dung, địa điểm, kết quả và lãnh đạo phụ trách phục vụ theo dõi, xác nhận giờ công và đánh giá KPI.
             </p>
           </div>
           <div class="flex flex-wrap items-center gap-3">
@@ -91,8 +115,8 @@ const PersonalLogs = {
 
             <!-- Member Selector (for Manager / Director) -->
             ${(Auth.isManager() || Auth.isDirector() || Auth.isAdmin()) ? `
-              <div class="min-w-[220px]">
-                <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Xem nhật ký của nhân sự</label>
+              <div class="min-w-[240px]">
+                <label class="block text-[10px] font-bold uppercase text-slate-400 mb-1">Xem phạm vi nhật ký</label>
                 <select id="select-log-member" onchange="PersonalLogs.handleMemberChange(this.value)" class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500">
                   <option value="${Auth.user.id}">👤 Bản thân tôi (${Auth.user.full_name})</option>
                 </select>
@@ -113,7 +137,7 @@ const PersonalLogs = {
 
             <div class="flex items-center gap-2">
               <div class="relative">
-                <input type="text" id="log-search-input" oninput="PersonalLogs.handleSearch(this.value)" placeholder="Tìm nội dung, phân loại, nhiệm vụ..." class="pl-7 pr-3 py-1.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs dark:text-white w-64">
+                <input type="text" id="log-search-input" oninput="PersonalLogs.handleSearch(this.value)" placeholder="Tìm nội dung, phân loại, lãnh đạo phụ trách..." class="pl-7 pr-3 py-1.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-xs dark:text-white w-64">
                 <i class="ph ph-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
               </div>
             </div>
@@ -209,6 +233,7 @@ const PersonalLogs = {
           optionsHtml = `<option value="${Auth.user.id}">👤 Bản thân tôi (${Auth.user.full_name})</option>`;
         } else if (isManager) {
           optionsHtml = `<option value="all">🏢 Tất cả cán bộ trong phòng (${cleanDeptName})</option>`;
+          optionsHtml += `<option value="supervised_${Auth.user.id}">👔 Việc tôi là Lãnh đạo phụ trách</option>`;
           optionsHtml += `<option value="${Auth.user.id}">👤 ${Auth.user.full_name} (Trưởng phòng)</option>`;
           
           const deptMembers = users.filter(u => u.department_id == Auth.user.department_id && u.id !== Auth.user.id);
@@ -217,6 +242,7 @@ const PersonalLogs = {
           });
         } else {
           optionsHtml = `<option value="all">🏛️ Toàn Trường (Tất cả 5 Phòng Ban)</option>`;
+          optionsHtml += `<option value="supervised_${Auth.user.id}">👔 Việc tôi là Lãnh đạo phụ trách</option>`;
           optionsHtml += `<option value="${Auth.user.id}">👤 ${Auth.user.full_name} (Bản thân tôi)</option>`;
 
           const deptsMap = {};
@@ -250,8 +276,14 @@ const PersonalLogs = {
     this.loadLogs();
   },
 
-  handleMemberChange(userId) {
-    this.targetUserId = parseInt(userId);
+  handleMemberChange(val) {
+    if (typeof val === 'string' && val.startsWith('supervised_')) {
+      this.targetSupervisorId = parseInt(val.replace('supervised_', ''));
+      this.targetUserId = null;
+    } else {
+      this.targetSupervisorId = null;
+      this.targetUserId = val === 'all' ? 'all' : parseInt(val);
+    }
     this.loadLogs();
   },
 
@@ -439,7 +471,12 @@ const PersonalLogs = {
 
   async loadLogs() {
     try {
-      let query = `?from_date=${this.fromDate}&to_date=${this.toDate}&user_id=${this.targetUserId}`;
+      let query = `?from_date=${this.fromDate}&to_date=${this.toDate}`;
+      if (this.targetSupervisorId) {
+        query += `&supervisor_id=${this.targetSupervisorId}`;
+      } else if (this.targetUserId) {
+        query += `&user_id=${this.targetUserId}`;
+      }
       if (this.searchQuery) query += `&search=${encodeURIComponent(this.searchQuery)}`;
 
       const [logs, stats] = await Promise.all([
@@ -668,6 +705,12 @@ const PersonalLogs = {
                     <i class="ph-bold ph-link text-slate-400"></i>
                     <span class="font-medium">${l.task_title || l.task_name || 'Việc phát sinh ngoài kế hoạch'}</span>
                   </div>
+                  ${l.supervisor_name ? `
+                    <div class="text-[11px] text-indigo-700 dark:text-indigo-400 mt-1 flex items-center gap-1 font-semibold" title="Lãnh đạo phụ trách: ${l.supervisor_name} (${l.supervisor_position || 'Lãnh đạo'})">
+                      <i class="ph-bold ph-user-focus text-xs"></i>
+                      <span>LĐ phụ trách: <b>${l.supervisor_name}</b></span>
+                    </div>
+                  ` : ''}
                 </td>
 
                 <td class="px-4 py-4 text-center whitespace-nowrap">
@@ -972,6 +1015,16 @@ const PersonalLogs = {
             </div>
 
             <div>
+              <label class="block text-xs font-bold uppercase text-slate-500 mb-1 flex items-center gap-1">
+                <i class="ph-bold ph-user-focus text-emerald-600"></i> Lãnh đạo phòng phụ trách / Giao việc
+              </label>
+              <select id="modal-log-supervisor" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-emerald-500">
+                ${this.getSupervisorOptions()}
+              </select>
+              <p class="text-[11px] text-slate-400 mt-1">Lãnh đạo được chọn sẽ nhận được thông báo và theo dõi được công việc này trong tài khoản quản lý.</p>
+            </div>
+
+            <div>
               <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Địa điểm thực hiện</label>
               <input type="text" id="modal-log-location" value="Tại Trường ĐT CB Agribank" placeholder="VD: Giảng đường 301, Chi nhánh Agribank..." class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs dark:text-white">
             </div>
@@ -1034,6 +1087,7 @@ const PersonalLogs = {
       const activity_type = document.getElementById('modal-log-type').value || 'Công tác chuyên môn';
       const hours_spent = document.getElementById('modal-log-hours').value;
       const task_name = document.getElementById('modal-log-task').value || '';
+      const supervisor_id = document.getElementById('modal-log-supervisor')?.value || null;
       const location = document.getElementById('modal-log-location').value;
       const description = document.getElementById('modal-log-desc').value;
       const status = document.querySelector('input[name="modal-log-status"]:checked')?.value || 'in_progress';
@@ -1050,6 +1104,7 @@ const PersonalLogs = {
           activity_type,
           hours_spent,
           task_name,
+          supervisor_id,
           location,
           description,
           result_outcome: '',
@@ -1151,6 +1206,16 @@ const PersonalLogs = {
             </div>
 
             <div>
+              <label class="block text-xs font-bold uppercase text-slate-500 mb-1 flex items-center gap-1">
+                <i class="ph-bold ph-user-focus text-blue-600"></i> Lãnh đạo phòng phụ trách / Giao việc
+              </label>
+              <select id="edit-log-supervisor" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500">
+                ${this.getSupervisorOptions(log.supervisor_id)}
+              </select>
+              <p class="text-[11px] text-slate-400 mt-1">Lãnh đạo được chọn sẽ theo dõi được công việc này trong tài khoản quản lý.</p>
+            </div>
+
+            <div>
               <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Địa điểm thực hiện</label>
               <input type="text" id="edit-log-location" value="${log.location || ''}" class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs dark:text-white">
             </div>
@@ -1209,6 +1274,7 @@ const PersonalLogs = {
       const activity_type = document.getElementById('edit-log-type').value;
       const hours_spent = document.getElementById('edit-log-hours').value;
       const task_name = document.getElementById('edit-log-task').value || '';
+      const supervisor_id = document.getElementById('edit-log-supervisor')?.value || null;
       const location = document.getElementById('edit-log-location').value;
       const description = document.getElementById('edit-log-desc').value;
       const status = document.querySelector('input[name="edit-log-status"]:checked')?.value || 'in_progress';
@@ -1225,6 +1291,7 @@ const PersonalLogs = {
           activity_type,
           hours_spent,
           task_name,
+          supervisor_id,
           location,
           description,
           result_outcome: '',
@@ -1264,7 +1331,10 @@ const PersonalLogs = {
       let query = `?from_date=${this.fromDate || ''}&to_date=${this.toDate || ''}`;
       let scopeTitle = '';
 
-      if (isStaff) {
+      if (this.targetSupervisorId) {
+        query += `&supervisor_id=${this.targetSupervisorId}`;
+        scopeTitle = `Lanh_dao_phu_trach_${Auth.user.full_name.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      } else if (isStaff) {
         query += `&user_id=${Auth.user.id}`;
         scopeTitle = `Nhan_vien_${Auth.user.full_name.replace(/[^a-zA-Z0-9]/g, '_')}`;
       } else if (isManager) {
@@ -1308,6 +1378,7 @@ const PersonalLogs = {
           'Họ và tên cán bộ': l.user_name,
           'Chức vụ': l.user_position || l.user_role,
           'Phòng ban': l.department_name,
+          'Lãnh đạo phụ trách': l.supervisor_name ? `${l.supervisor_name} (${l.supervisor_position || 'Lãnh đạo'})` : 'Chưa chỉ định',
           'Từ ngày': l.start_date,
           'Đến ngày': l.end_date,
           'Khung giờ': timeRange,
@@ -1331,6 +1402,7 @@ const PersonalLogs = {
         { wch: 22 }, // Tên cán bộ
         { wch: 18 }, // Chức vụ
         { wch: 30 }, // Phòng ban
+        { wch: 25 }, // Lãnh đạo phụ trách
         { wch: 14 }, // Từ ngày
         { wch: 14 }, // Đến ngày
         { wch: 16 }, // Khung giờ

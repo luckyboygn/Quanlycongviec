@@ -22,7 +22,7 @@ const DiaryController = {
 
   async create(req, res) {
     try {
-      const { title, activity_type, start_date, end_date, start_time, end_time, hours_spent, location, description, result_outcome, attachment_url, task_id, task_name, status, auto_complete } = req.body;
+      const { title, activity_type, start_date, end_date, start_time, end_time, hours_spent, location, description, result_outcome, attachment_url, task_id, task_name, status, auto_complete, supervisor_id } = req.body;
       if (!title || !start_date || !end_date || !description) {
         return res.status(400).json({ error: 'Vui lòng điền đầy đủ tiêu đề, thời gian và nội dung công việc' });
       }
@@ -39,6 +39,7 @@ const DiaryController = {
 
       const logId = await DiaryRepository.create({
         user_id: req.user.id, department_id: req.user.department_id,
+        supervisor_id: supervisor_id ? parseInt(supervisor_id) : null,
         task_id, task_name, title, activity_type, start_date, end_date,
         start_time, end_time, hours_spent, location, description,
         result_outcome, attachment_url,
@@ -48,6 +49,22 @@ const DiaryController = {
 
       const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
       await logActivity(req.user.id, req.user.full_name, 'CREATE_PERSONAL_LOG', 'personal_work_logs', logId, `Kê khai nhật ký: "${title}" (${hours_spent || 8} giờ)`, clientIp);
+
+      // Gửi thông báo đến Lãnh đạo phụ trách nếu được gắn
+      if (supervisor_id && parseInt(supervisor_id) !== req.user.id) {
+        try {
+          const NotificationRepository = require('../repositories/notification.repository');
+          await NotificationRepository.create({
+            user_id: parseInt(supervisor_id),
+            title: 'Kê khai công việc mới gắn với Lãnh đạo',
+            content: `Cán bộ ${req.user.full_name} (${req.user.position || 'Cán bộ'}) đã kê khai công việc: "${title}" (${hours_spent || 8}h) gắn với bạn là Lãnh đạo phụ trách.`,
+            type: 'info',
+            related_id: logId
+          });
+        } catch (notifErr) {
+          console.error('Error sending notification to supervisor:', notifErr);
+        }
+      }
 
       const newLog = await DiaryRepository.findById(logId);
       res.status(201).json(newLog);
@@ -66,7 +83,7 @@ const DiaryController = {
         return res.status(403).json({ error: 'Bạn chỉ có quyền sửa bản kê khai của chính mình' });
       }
 
-      const { title, activity_type, start_date, end_date, start_time, end_time, hours_spent, location, description, result_outcome, attachment_url, task_id, task_name, status, auto_complete } = req.body;
+      const { title, activity_type, start_date, end_date, start_time, end_time, hours_spent, location, description, result_outcome, attachment_url, task_id, task_name, status, auto_complete, supervisor_id } = req.body;
 
       if (start_time && end_time) {
         const overlap = await DiaryRepository.checkOverlap(current.user_id, start_date || current.start_date, start_time, end_time, logId);
@@ -78,6 +95,7 @@ const DiaryController = {
       }
 
       await DiaryRepository.update(logId, {
+        supervisor_id: supervisor_id !== undefined ? (supervisor_id ? parseInt(supervisor_id) : null) : current.supervisor_id,
         task_id, task_name, title, activity_type,
         start_date: start_date || current.start_date, end_date: end_date || current.end_date,
         start_time: start_time || null, end_time: end_time || null,

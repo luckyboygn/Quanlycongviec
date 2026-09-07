@@ -30,19 +30,24 @@ const DiaryRepository = {
              u.full_name as user_name, u.role as user_role, u.position as user_position, u.employee_code,
              d.name as department_name, d.code as department_code,
              t.title as ref_task_title,
-             appr.full_name as approved_by_name
+             appr.full_name as approved_by_name,
+             sup.full_name as supervisor_name, sup.position as supervisor_position, sup.role as supervisor_role
       FROM personal_work_logs pwl
       JOIN users u ON pwl.user_id = u.id
       LEFT JOIN departments d ON pwl.department_id = d.id
       LEFT JOIN tasks t ON pwl.task_id = t.id
       LEFT JOIN users appr ON pwl.approved_by = appr.id
+      LEFT JOIN users sup ON pwl.supervisor_id = sup.id
       WHERE 1=1
     `;
     const params = [];
 
     const isDirectorOrAdmin = user && (user.role === 'director' || user.role === 'admin');
 
-    if (isDirectorOrAdmin) {
+    if (filter.supervisor_id) {
+      sql += ` AND pwl.supervisor_id = ?`;
+      params.push(filter.supervisor_id);
+    } else if (isDirectorOrAdmin) {
       if (filter.department_id) {
         sql += ` AND pwl.department_id = ?`;
         params.push(filter.department_id);
@@ -53,8 +58,8 @@ const DiaryRepository = {
     } else if (user && user.role === 'manager') {
       const targetDept = filter.department_id || user.department_id;
       if (targetDept) {
-        sql += ` AND pwl.department_id = ?`;
-        params.push(targetDept);
+        sql += ` AND (pwl.department_id = ? OR pwl.supervisor_id = ?)`;
+        params.push(targetDept, user.id);
       }
     } else if (filter.department_id) {
       sql += ` AND pwl.department_id = ?`;
@@ -121,12 +126,14 @@ const DiaryRepository = {
              u.full_name as user_name, u.role as user_role, u.position as user_position, u.employee_code,
              d.name as department_name, d.code as department_code,
              t.title as ref_task_title,
-             appr.full_name as approved_by_name
+             appr.full_name as approved_by_name,
+             sup.full_name as supervisor_name, sup.position as supervisor_position, sup.role as supervisor_role
       FROM personal_work_logs pwl
       JOIN users u ON pwl.user_id = u.id
       LEFT JOIN departments d ON pwl.department_id = d.id
       LEFT JOIN tasks t ON pwl.task_id = t.id
       LEFT JOIN users appr ON pwl.approved_by = appr.id
+      LEFT JOIN users sup ON pwl.supervisor_id = sup.id
       WHERE pwl.id = ?
     `, [id]);
   },
@@ -157,13 +164,13 @@ const DiaryRepository = {
 
     const res = await db.runAsync(`
       INSERT INTO personal_work_logs (
-        user_id, department_id, task_id, task_name, title, activity_type,
+        user_id, department_id, supervisor_id, task_id, task_name, title, activity_type,
         start_date, end_date, start_time, end_time, hours_spent, location,
         description, result_outcome, attachment_url, status, auto_complete, completed_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
-      data.user_id, data.department_id, data.task_id || null, data.task_name || null,
+      data.user_id, data.department_id, data.supervisor_id || null, data.task_id || null, data.task_name || null,
       data.title, data.activity_type || 'Công tác chuyên môn',
       data.start_date, data.end_date, data.start_time || null, data.end_time || null,
       data.hours_spent || 8.0, data.location || 'Tại Trường ĐT CB Agribank',
@@ -181,7 +188,7 @@ const DiaryRepository = {
 
     return await db.runAsync(`
       UPDATE personal_work_logs
-      SET task_id = ?, task_name = ?, title = ?, activity_type = ?,
+      SET supervisor_id = ?, task_id = ?, task_name = ?, title = ?, activity_type = ?,
           start_date = ?, end_date = ?, start_time = ?, end_time = ?,
           hours_spent = ?, location = ?, description = ?, result_outcome = ?,
           attachment_url = ?, status = COALESCE(?, status),
@@ -190,6 +197,7 @@ const DiaryRepository = {
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `, [
+      data.supervisor_id !== undefined ? data.supervisor_id : null,
       data.task_id || null, data.task_name || null, data.title, data.activity_type,
       data.start_date, data.end_date, data.start_time || null, data.end_time || null,
       data.hours_spent, data.location, data.description, data.result_outcome || null,
@@ -223,39 +231,45 @@ const DiaryRepository = {
         activity_type,
         COUNT(*) as type_count,
         SUM(hours_spent) as type_hours
-      FROM personal_work_logs
+      FROM personal_work_logs pwl
       WHERE 1=1
     `;
     const params = [];
 
-    if (user && user.role === 'staff') {
-      sql += ` AND user_id = ?`;
+    if (filter.supervisor_id) {
+      sql += ` AND pwl.supervisor_id = ?`;
+      params.push(filter.supervisor_id);
+    } else if (user && user.role === 'staff') {
+      sql += ` AND pwl.user_id = ?`;
       params.push(user.id);
     } else if (user && user.role === 'manager') {
-      sql += ` AND department_id = ?`;
-      params.push(user.department_id);
+      const targetDept = filter.department_id || user.department_id;
+      if (targetDept) {
+        sql += ` AND (pwl.department_id = ? OR pwl.supervisor_id = ?)`;
+        params.push(targetDept, user.id);
+      }
     } else if (filter.department_id) {
-      sql += ` AND department_id = ?`;
+      sql += ` AND pwl.department_id = ?`;
       params.push(filter.department_id);
     }
 
     if (filter.user_id && filter.user_id !== 'all') {
-      sql += ` AND user_id = ?`;
+      sql += ` AND pwl.user_id = ?`;
       params.push(filter.user_id);
     }
     const fromDate = filter.from_date || filter.start_date;
     const toDate = filter.to_date || filter.end_date;
 
     if (fromDate) {
-      sql += ` AND end_date >= ?`;
+      sql += ` AND pwl.end_date >= ?`;
       params.push(fromDate);
     }
     if (toDate) {
-      sql += ` AND start_date <= ?`;
+      sql += ` AND pwl.start_date <= ?`;
       params.push(toDate);
     }
 
-    sql += ` GROUP BY activity_type`;
+    sql += ` GROUP BY pwl.activity_type`;
     return await db.allAsync(sql, params);
   }
 };

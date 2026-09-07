@@ -202,6 +202,7 @@ async function initDB() {
   await safeAddColumn('personal_work_logs', 'approved_by', 'INTEGER');
   await safeAddColumn('personal_work_logs', 'approved_at', 'DATETIME');
   await safeAddColumn('personal_work_logs', 'approval_comment', 'TEXT');
+  await safeAddColumn('personal_work_logs', 'supervisor_id', 'INTEGER REFERENCES users(id) ON DELETE SET NULL');
 
   // 10. Messages table
   await execTable(`
