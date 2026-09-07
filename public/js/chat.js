@@ -49,7 +49,7 @@ const Chat = {
     if (this.contactsPollTimer) clearInterval(this.contactsPollTimer);
 
     container.innerHTML = `
-      <div class="h-[calc(100vh-140px)] min-h-[580px] bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col md:flex-row">
+      <div class="h-[calc(100vh-130px)] min-h-[500px] max-h-[calc(100vh-100px)] bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden flex flex-col md:flex-row">
         <!-- Left Sidebar: Contacts & Channels -->
         <div class="w-full md:w-80 lg:w-96 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700 flex flex-col bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
           
@@ -391,10 +391,13 @@ const Chat = {
   },
 
   renderContactItem(c) {
+    if (!c) return '';
     const isActive = this.activeContactId === c.id;
+    const fullName = c.full_name || 'Cán bộ';
+    const initial = (fullName.trim().split(' ').pop() || 'U')[0]?.toUpperCase() || 'U';
     const roleTag = c.role === 'director' ? 'BGD' : c.role === 'admin' ? 'Admin' : c.role === 'manager' ? (c.position || 'Trưởng phòng') : (c.position || 'Nhân viên');
     const tagColor = c.role === 'director' ? 'bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300' : c.role === 'admin' ? 'bg-purple-100 text-purple-900 dark:bg-purple-950/60 dark:text-purple-300' : c.role === 'manager' ? 'bg-blue-100 text-blue-900 dark:bg-blue-950/60 dark:text-blue-300' : 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-300';
-    const hasUnread = c.unread_count > 0;
+    const hasUnread = (c.unread_count || 0) > 0;
 
     return `
       <button onclick="Chat.selectContact(${c.id})" class="w-full text-left p-2.5 rounded-2xl transition flex items-center justify-between ${isActive ? 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 shadow-2xs' : 'hover:bg-slate-100 dark:hover:bg-slate-700/60'}">
@@ -402,7 +405,7 @@ const Chat = {
           <!-- Avatar with Initial & Status Dot -->
           <div class="relative shrink-0">
             <div class="w-9 h-9 rounded-xl ${c.role === 'director' ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300' : c.role === 'admin' ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300' : c.role === 'manager' ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'} font-bold flex items-center justify-center text-xs shadow-2xs">
-              ${c.full_name.split(' ').pop()[0]}
+              ${initial}
             </div>
             ${c.is_online ? `
               <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-800 rounded-full ring-1 ring-emerald-400/40 shadow-xs animate-pulse" title="Đang trực tuyến"></span>
@@ -413,7 +416,7 @@ const Chat = {
           <div class="min-w-0 flex-1 pr-1">
             <div class="font-bold text-slate-800 dark:text-white text-xs truncate flex items-center justify-between gap-1.5">
               <div class="flex items-center gap-1.5 truncate min-w-0">
-                <span class="truncate ${hasUnread ? 'text-emerald-700 dark:text-emerald-400 font-extrabold' : ''}">${c.full_name}</span>
+                <span class="truncate ${hasUnread ? 'text-emerald-700 dark:text-emerald-400 font-extrabold' : ''}">${fullName}</span>
                 ${c.is_online ? `
                   <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-black bg-emerald-100 dark:bg-emerald-950/90 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 shrink-0" title="Đang trực tuyến">
                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Online
@@ -428,7 +431,7 @@ const Chat = {
             </div>
 
             <div class="text-[10px] ${hasUnread ? 'text-slate-700 dark:text-slate-200 font-bold' : 'text-slate-400'} truncate mt-0.5 flex items-center justify-between">
-              <span class="truncate">${c.last_message ? (c.last_sender_id === Auth.user.id ? `Bạn: ${c.last_message}` : c.last_message) : (c.position ? `${c.position} • ${c.department_name || ''}` : (c.department_name || roleTag))}</span>
+              <span class="truncate">${c.last_message ? (c.last_sender_id === (Auth.user && Auth.user.id) ? `Bạn: ${c.last_message}` : c.last_message) : (c.position ? `${c.position} • ${c.department_name || ''}` : (c.department_name || roleTag))}</span>
             </div>
           </div>
         </div>
@@ -668,11 +671,12 @@ const Chat = {
     let html = '';
 
     this.messages.forEach(m => {
-      const isMe = m.sender_id === Auth.user.id;
+      const isMe = Auth.user && m.sender_id === Auth.user.id;
       const canManage = isMe || (Auth.user && Auth.user.role === 'admin');
       const isRecalled = m.is_recalled === 1 || m.content === 'Tin nhắn đã được thu hồi';
       const msgDate = new Date(m.created_at).toLocaleDateString('vi-VN');
       const msgTime = new Date(m.created_at).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      const senderInitial = (m.sender_name ? m.sender_name.trim().split(' ').pop() : 'U')?.[0]?.toUpperCase() || 'U';
 
       if (msgDate !== lastDate) {
         lastDate = msgDate;
@@ -690,13 +694,13 @@ const Chat = {
           <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} group/msg">
             ${!isMe && isGroup ? `
               <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 px-1">
-                ${m.sender_name} (${m.sender_position || m.sender_role})
+                ${m.sender_name || 'Cán bộ'} (${m.sender_position || m.sender_role || ''})
               </span>
             ` : ''}
             <div class="flex items-center gap-1.5 max-w-[85%] sm:max-w-[75%] ${isMe ? 'flex-row-reverse' : 'flex-row'}">
               ${!isMe ? `
                 <div class="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold flex items-center justify-center text-[10px] shrink-0 mb-0.5">
-                  ${m.sender_name ? m.sender_name.split(' ').pop()[0] : 'U'}
+                  ${senderInitial}
                 </div>
               ` : ''}
 
@@ -728,13 +732,13 @@ const Chat = {
         <div class="flex flex-col ${isMe ? 'items-end' : 'items-start'} group/msg">
           ${!isMe && isGroup ? `
             <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-1 px-1">
-              ${m.sender_name} (${m.sender_position || m.sender_role})
+              ${m.sender_name || 'Cán bộ'} (${m.sender_position || m.sender_role || ''})
             </span>
           ` : ''}
           <div class="flex items-center gap-1.5 max-w-[85%] sm:max-w-[75%] ${isMe ? 'flex-row-reverse' : 'flex-row'}">
             ${!isMe ? `
               <div class="w-6 h-6 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold flex items-center justify-center text-[10px] shrink-0 mb-0.5">
-                ${m.sender_name ? m.sender_name.split(' ').pop()[0] : 'U'}
+                ${senderInitial}
               </div>
             ` : ''}
 
