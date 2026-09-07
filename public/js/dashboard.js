@@ -1447,6 +1447,33 @@ const Dashboard = {
     this.renderBulletinBoard();
   },
 
+  formatNewsDate(dateInput) {
+    if (!dateInput) return '';
+    try {
+      const dStr = String(dateInput).trim();
+      const match = dStr.match(/(\d{4})-(\d{2})-(\d{2})/);
+      if (match) {
+        return `${match[3]}/${match[2]}/${match[1]}`;
+      }
+      const d = new Date(dateInput);
+      if (!isNaN(d.getTime())) {
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+      }
+      return dStr;
+    } catch (e) {
+      return String(dateInput || '');
+    }
+  },
+
+  getIsoDate(dateInput) {
+    if (!dateInput) return new Date().toISOString().split('T')[0];
+    const match = String(dateInput).match(/(\d{4})-(\d{2})-(\d{2})/);
+    return match ? `${match[1]}-${match[2]}-${match[3]}` : new Date().toISOString().split('T')[0];
+  },
+
   renderBulletinBoard() {
     const container = document.getElementById('dashboard-bulletin-board');
     if (!container) return;
@@ -1525,8 +1552,7 @@ const Dashboard = {
             <!-- News List (Simple, Spacious & Elegant) -->
             <div class="bg-white/5 dark:bg-slate-900/60 rounded-2xl border border-white/10 dark:border-slate-700/60 divide-y divide-white/10 dark:divide-slate-700/50 overflow-hidden shadow-inner">
               ${allNews.map((n, idx) => {
-                const rawDate = n.news_date || (n.created_at ? n.created_at.split(' ')[0] : '');
-                const dateStr = rawDate ? rawDate.split('-').reverse().join('/') : '';
+                const dateStr = this.formatNewsDate(n.news_date || n.created_at);
                 const category = n.category || 'Lịch công tác';
                 
                 let catBadge = `<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0"><i class="ph-bold ph-megaphone"></i> ${category}</span>`;
@@ -1609,37 +1635,57 @@ const Dashboard = {
     if (!item) return;
 
     const modalContainer = document.getElementById('modal-container');
-    const rawDate = item.news_date || (item.created_at ? item.created_at.split(' ')[0] : '');
-    const dateStr = rawDate ? rawDate.split('-').reverse().join('/') : '';
+    const formattedEventDate = this.formatNewsDate(item.news_date || item.created_at);
+    const formattedCreatedDate = this.formatNewsDate(item.created_at);
     const category = item.category || 'Lịch công tác';
+    const isSchedule = category.includes('Lịch');
 
     modalContainer.innerHTML = `
       <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-5 my-8">
           
           <!-- Modal Header -->
-          <div class="flex items-start justify-between border-b border-slate-100 dark:border-slate-700 pb-4">
-            <div class="space-y-1.5 pr-4">
-              <div class="flex items-center gap-2">
-                <span class="px-2.5 py-0.5 rounded-lg text-xs font-extrabold uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 inline-flex items-center gap-1">
-                  <i class="ph-bold ph-tag"></i> ${category}
+          <div class="flex items-start justify-between border-b border-slate-100 dark:border-slate-700 pb-5">
+            <div class="space-y-2.5 pr-4 flex-1">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="px-3 py-1 rounded-lg text-xs font-extrabold uppercase tracking-wider ${isSchedule ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300 border border-amber-300 dark:border-amber-800' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'} inline-flex items-center gap-1.5 shadow-sm">
+                  <i class="ph-bold ${isSchedule ? 'ph-calendar-star' : 'ph-megaphone'}"></i> ${category}
                 </span>
                 ${item.is_pinned ? `
-                  <span class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 inline-flex items-center gap-1">
-                    <i class="ph-bold ph-push-pin"></i> Tin nổi bật (Đã ghim)
+                  <span class="px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950/80 dark:text-rose-300 inline-flex items-center gap-1 border border-rose-300 dark:border-rose-800">
+                    <i class="ph-bold ph-push-pin text-rose-500"></i> Ưu tiên hiển thị
                   </span>
                 ` : ''}
               </div>
-              <h2 class="text-xl sm:text-2xl font-black text-slate-800 dark:text-white leading-tight">
+
+              <h2 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-snug tracking-tight">
                 ${item.title}
               </h2>
-              <div class="flex items-center gap-3 text-xs text-slate-400 font-medium">
-                <span class="font-bold text-slate-600 dark:text-slate-300">🏛️ ${item.author_name || 'Ban Quản trị'}</span>
-                <span>•</span>
-                <span class="text-emerald-600 dark:text-emerald-400 font-bold font-mono">📅 Ngày: ${dateStr}</span>
+
+              <!-- Meta Info Chips Bar (Khoa học, gọn gàng, trực quan) -->
+              <div class="flex flex-wrap items-center gap-2.5 pt-1 text-xs font-medium">
+                <div class="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600/60 shadow-xs">
+                  <i class="ph-bold ph-calendar text-emerald-600 dark:text-emerald-400 text-sm"></i>
+                  <span class="text-slate-500 dark:text-slate-400">Lịch ngày:</span>
+                  <span class="font-black text-emerald-700 dark:text-emerald-300 font-mono">${formattedEventDate}</span>
+                </div>
+
+                <div class="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-600/60 shadow-xs">
+                  <i class="ph-bold ph-user-circle text-blue-600 dark:text-blue-400 text-sm"></i>
+                  <span class="text-slate-500 dark:text-slate-400">Người đăng:</span>
+                  <span class="font-bold">${item.author_name || 'Ban Quản trị'}</span>
+                </div>
+
+                ${formattedCreatedDate && formattedCreatedDate !== formattedEventDate ? `
+                  <div class="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-50 dark:bg-slate-700/30 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700/40 text-[11px]">
+                    <i class="ph-bold ph-clock"></i>
+                    <span>Tạo ngày: ${formattedCreatedDate}</span>
+                  </div>
+                ` : ''}
               </div>
             </div>
-            <button onclick="App.closeModal()" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl transition shrink-0">
+
+            <button onclick="App.closeModal()" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-2xl transition shrink-0">
               <i class="ph-bold ph-x text-xl"></i>
             </button>
           </div>
@@ -1647,22 +1693,26 @@ const Dashboard = {
           <!-- Modal Body -->
           <div class="space-y-4 text-slate-700 dark:text-slate-200 text-sm leading-relaxed max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
             ${item.summary ? `
-              <div class="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 border-l-4 border-emerald-600 rounded-r-xl font-medium text-emerald-900 dark:text-emerald-200 text-xs">
+              <div class="p-4 bg-emerald-50/80 dark:bg-emerald-950/40 border-l-4 border-emerald-600 rounded-r-2xl font-medium text-emerald-900 dark:text-emerald-200 text-xs shadow-xs">
+                <div class="font-bold text-emerald-800 dark:text-emerald-300 mb-1 flex items-center gap-1.5">
+                  <i class="ph-bold ph-info"></i> Tóm tắt nội dung
+                </div>
                 ${item.summary}
               </div>
             ` : ''}
 
-            <div class="whitespace-pre-line text-xs sm:text-sm">
+            <div class="p-4 rounded-2xl bg-slate-50/60 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700/50 whitespace-pre-line text-xs sm:text-sm font-normal leading-relaxed text-slate-800 dark:text-slate-100">
               ${item.content}
             </div>
           </div>
 
           <!-- Modal Footer -->
           <div class="pt-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-between">
-            <div class="text-[11px] text-slate-400 font-medium">
-              Trường Đào tạo cán bộ Agribank
+            <div class="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
+              <i class="ph-bold ph-bank text-emerald-600"></i>
+              <span>Trường Đào tạo cán bộ Agribank</span>
             </div>
-            <button onclick="App.closeModal()" class="px-5 py-2 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold text-xs transition">
+            <button onclick="App.closeModal()" class="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold text-xs transition shadow-xs">
               Đóng
             </button>
           </div>
@@ -1787,7 +1837,7 @@ const Dashboard = {
     if (!item) return;
 
     const modalContainer = document.getElementById('modal-container');
-    const defaultDate = item.news_date || (item.created_at ? item.created_at.split(' ')[0] : new Date().toISOString().split('T')[0]);
+    const defaultDate = this.getIsoDate(item.news_date || item.created_at);
     const currentCategory = item.category || 'Lịch công tác';
 
     modalContainer.innerHTML = `
