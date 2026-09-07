@@ -1468,14 +1468,14 @@ const Dashboard = {
             <div>
               <div class="flex items-center gap-2">
                 <h2 class="text-lg sm:text-xl font-black tracking-tight text-white flex items-center gap-2">
-                  BẢNG TIN HOẠT ĐỘNG & THÔNG BÁO NỘI BỘ
+                  BẢNG TIN HOẠT ĐỘNG & LỊCH CÔNG TÁC NỘI BỘ
                 </h2>
                 <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  ${allNews.length} tin tức
+                  ${allNews.length} mục
                 </span>
               </div>
               <p class="text-xs text-slate-300 mt-0.5">
-                Cập nhật thông báo chỉ đạo, kế hoạch đào tạo và các sự kiện hoạt động trọng tâm của Trường Đào tạo cán bộ Agribank
+                Cập nhật lịch công tác tuần, thông báo chỉ đạo, kế hoạch đào tạo và các sự kiện trọng tâm của Trường Đào tạo cán bộ Agribank
               </p>
             </div>
           </div>
@@ -1485,7 +1485,7 @@ const Dashboard = {
             ${isAdmin ? `
               <button onclick="Dashboard.openCreateNewsModal()" class="px-3.5 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-emerald-900/40 flex items-center gap-1.5 transition transform hover:scale-102">
                 <i class="ph-bold ph-plus-circle text-base"></i>
-                <span>Đăng tin mới (Admin)</span>
+                <span>Đăng tin / Lịch công tác (Admin)</span>
               </button>
             ` : ''}
           </div>
@@ -1519,17 +1519,29 @@ const Dashboard = {
             <!-- Empty State -->
             <div class="py-8 text-center text-slate-400 text-xs bg-white/5 rounded-2xl border border-white/5">
               <i class="ph-bold ph-newspaper text-3xl mb-2 block opacity-40"></i>
-              Hiện chưa có tin tức nào được đăng tải.
+              Hiện chưa có thông báo hoặc lịch công tác nào được đăng tải.
             </div>
           ` : `
             <!-- News List (Simple, Spacious & Elegant) -->
             <div class="bg-white/5 dark:bg-slate-900/60 rounded-2xl border border-white/10 dark:border-slate-700/60 divide-y divide-white/10 dark:divide-slate-700/50 overflow-hidden shadow-inner">
               ${allNews.map((n, idx) => {
-                const dateStr = n.created_at ? n.created_at.split(' ')[0].split('-').reverse().join('/') : '';
+                const rawDate = n.news_date || (n.created_at ? n.created_at.split(' ')[0] : '');
+                const dateStr = rawDate ? rawDate.split('-').reverse().join('/') : '';
+                const category = n.category || 'Lịch công tác';
+                
+                let catBadge = `<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0"><i class="ph-bold ph-megaphone"></i> ${category}</span>`;
+                if (category.includes('Lịch')) {
+                  catBadge = `<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0"><i class="ph-bold ph-calendar-star"></i> ${category}</span>`;
+                } else if (category.includes('Kế hoạch') || category.includes('Đào tạo')) {
+                  catBadge = `<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide bg-blue-500/20 text-blue-300 border border-blue-500/30 shrink-0"><i class="ph-bold ph-graduation-cap"></i> ${category}</span>`;
+                } else if (category.includes('Sự kiện')) {
+                  catBadge = `<span class="px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase tracking-wide bg-purple-500/20 text-purple-300 border border-purple-500/30 shrink-0"><i class="ph-bold ph-flag"></i> ${category}</span>`;
+                }
+
                 return `
-                  <div class="news-row-item px-4 py-3 sm:px-5 sm:py-3.5 hover:bg-white/10 dark:hover:bg-slate-800/80 transition flex flex-col md:flex-row md:items-center justify-between gap-2.5 md:gap-4 group cursor-pointer ${n.is_pinned ? 'bg-amber-950/15' : ''}" onclick="Dashboard.openNewsDetailModal(${n.id})">
+                  <div class="news-row-item px-4 py-3 sm:px-5 sm:py-3.5 hover:bg-white/10 dark:hover:bg-slate-800/80 transition flex flex-col md:flex-row md:items-center justify-between gap-2.5 md:gap-4 group cursor-pointer ${n.is_pinned ? 'bg-amber-950/20' : ''}" onclick="Dashboard.openNewsDetailModal(${n.id})">
                     
-                    <!-- Left: Title with Pin or Number indicator (flex-1 with full space & ellipsis) -->
+                    <!-- Left: Title with Pin or Number indicator & Category Badge -->
                     <div class="flex items-center gap-3 flex-1 min-w-0">
                       <span class="flex items-center justify-center shrink-0">
                         ${n.is_pinned ? `
@@ -1543,16 +1555,19 @@ const Dashboard = {
                         `}
                       </span>
 
-                      <span class="text-xs sm:text-sm font-bold text-white group-hover:text-emerald-300 transition truncate block leading-snug" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${n.title.replace(/"/g, '&quot;')}">
-                        ${n.title}
-                      </span>
+                      <div class="flex items-center gap-2 flex-1 min-w-0">
+                        ${catBadge}
+                        <span class="text-xs sm:text-sm font-bold text-white group-hover:text-emerald-300 transition truncate block leading-snug" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${n.title.replace(/"/g, '&quot;')}">
+                          ${n.title}
+                        </span>
+                      </div>
                     </div>
 
                     <!-- Right on Desktop / Bottom on Mobile: Date, Actions -->
                     <div class="flex items-center justify-between md:justify-end gap-3 sm:gap-5 shrink-0 border-t md:border-t-0 pt-2 md:pt-0 border-white/5">
-                      <!-- Ngày đăng -->
-                      <div class="w-24 sm:w-28 shrink-0 text-[11px] sm:text-xs text-slate-400 font-mono flex items-center gap-1 text-center justify-center">
-                        <i class="ph-bold ph-calendar-blank text-slate-400 shrink-0"></i>
+                      <!-- Ngày tháng lịch công tác / thông báo -->
+                      <div class="w-28 sm:w-32 shrink-0 text-[11px] sm:text-xs font-semibold text-emerald-300/90 font-mono flex items-center gap-1.5 justify-start md:justify-center bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
+                        <i class="ph-bold ph-calendar-blank text-emerald-400 shrink-0"></i>
                         <span>${dateStr}</span>
                       </div>
 
@@ -1594,7 +1609,9 @@ const Dashboard = {
     if (!item) return;
 
     const modalContainer = document.getElementById('modal-container');
-    const dateStr = item.created_at ? item.created_at.split(' ')[0].split('-').reverse().join('/') : '';
+    const rawDate = item.news_date || (item.created_at ? item.created_at.split(' ')[0] : '');
+    const dateStr = rawDate ? rawDate.split('-').reverse().join('/') : '';
+    const category = item.category || 'Lịch công tác';
 
     modalContainer.innerHTML = `
       <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -1603,18 +1620,23 @@ const Dashboard = {
           <!-- Modal Header -->
           <div class="flex items-start justify-between border-b border-slate-100 dark:border-slate-700 pb-4">
             <div class="space-y-1.5 pr-4">
-              ${item.is_pinned ? `
-                <span class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 inline-flex items-center gap-1 mb-1">
-                  <i class="ph-bold ph-push-pin"></i> Tin nổi bật (Đã ghim)
+              <div class="flex items-center gap-2">
+                <span class="px-2.5 py-0.5 rounded-lg text-xs font-extrabold uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 inline-flex items-center gap-1">
+                  <i class="ph-bold ph-tag"></i> ${category}
                 </span>
-              ` : ''}
+                ${item.is_pinned ? `
+                  <span class="px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 inline-flex items-center gap-1">
+                    <i class="ph-bold ph-push-pin"></i> Tin nổi bật (Đã ghim)
+                  </span>
+                ` : ''}
+              </div>
               <h2 class="text-xl sm:text-2xl font-black text-slate-800 dark:text-white leading-tight">
                 ${item.title}
               </h2>
-              <div class="flex items-center gap-2 text-xs text-slate-400">
+              <div class="flex items-center gap-3 text-xs text-slate-400 font-medium">
                 <span class="font-bold text-slate-600 dark:text-slate-300">🏛️ ${item.author_name || 'Ban Quản trị'}</span>
                 <span>•</span>
-                <span>📅 ${dateStr}</span>
+                <span class="text-emerald-600 dark:text-emerald-400 font-bold font-mono">📅 Ngày: ${dateStr}</span>
               </div>
             </div>
             <button onclick="App.closeModal()" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl transition shrink-0">
@@ -1651,6 +1673,8 @@ const Dashboard = {
 
   openCreateNewsModal() {
     const modalContainer = document.getElementById('modal-container');
+    const todayStr = new Date().toISOString().split('T')[0];
+
     modalContainer.innerHTML = `
       <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-5 my-8">
@@ -1658,14 +1682,14 @@ const Dashboard = {
           <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-700 pb-4">
             <div class="flex items-center gap-3">
               <span class="p-2.5 bg-emerald-50 dark:bg-emerald-950/50 text-[#005d39] dark:text-emerald-400 rounded-2xl">
-                <i class="ph-bold ph-newspaper-clipping text-2xl"></i>
+                <i class="ph-bold ph-calendar-plus text-2xl"></i>
               </span>
               <div>
                 <h3 class="text-lg font-extrabold text-slate-800 dark:text-white">
-                  Đăng Tin Tức & Thông Báo Mới
+                  Đăng Lịch Công Tác & Tin Tức Mới
                 </h3>
                 <p class="text-xs text-slate-500 dark:text-slate-400">
-                  Tin tức sẽ hiển thị nổi bật ở đầu trang Tổng Quan của toàn thể cán bộ
+                  Nội dung sẽ hiển thị nổi bật ở đầu trang Tổng Quan của toàn thể cán bộ
                 </p>
               </div>
             </div>
@@ -1676,8 +1700,32 @@ const Dashboard = {
 
           <form onsubmit="Dashboard.submitCreateNews(event)" class="space-y-4 text-xs">
             <div>
-              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tiêu đề tin tức *</label>
-              <input type="text" id="news-create-title" required placeholder="VD: Thông báo kế hoạch đào tạo cán bộ nguồn năm 2026" class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl font-bold dark:text-white focus:ring-2 focus:ring-[#005d39]">
+              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tiêu đề tin tức / Lịch công tác *</label>
+              <input type="text" id="news-create-title" required placeholder="VD: Lịch công tác tuần 37 / Kế hoạch đào tạo cán bộ nguồn..." class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl font-bold dark:text-white focus:ring-2 focus:ring-[#005d39]">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                  <i class="ph-bold ph-calendar text-emerald-600 dark:text-emerald-400"></i>
+                  <span>Ngày tháng (Lịch / Thông báo) *</span>
+                </label>
+                <input type="date" id="news-create-date" value="${todayStr}" required class="w-full px-3.5 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl font-bold dark:text-white focus:ring-2 focus:ring-[#005d39]">
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                  <i class="ph-bold ph-tag text-emerald-600 dark:text-emerald-400"></i>
+                  <span>Phân loại chuyên mục *</span>
+                </label>
+                <select id="news-create-category" class="w-full px-3.5 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl font-bold dark:text-white focus:ring-2 focus:ring-[#005d39]">
+                  <option value="Lịch công tác" selected>📅 Lịch công tác</option>
+                  <option value="Thông báo">📢 Thông báo</option>
+                  <option value="Kế hoạch đào tạo">🎓 Kế hoạch đào tạo</option>
+                  <option value="Sự kiện nội bộ">🚩 Sự kiện nội bộ</option>
+                  <option value="Chỉ đạo điều hành">⚖️ Chỉ đạo điều hành</option>
+                </select>
+              </div>
             </div>
 
             <div class="flex items-center">
@@ -1694,7 +1742,7 @@ const Dashboard = {
 
             <div>
               <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Nội dung chi tiết *</label>
-              <textarea id="news-create-content" required rows="6" placeholder="Nhập toàn bộ nội dung thông báo, văn bản chỉ đạo hoặc thông tin hoạt động..." class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl dark:text-white focus:ring-2 focus:ring-[#005d39]"></textarea>
+              <textarea id="news-create-content" required rows="6" placeholder="Nhập toàn bộ nội dung lịch công tác, thông báo, văn bản chỉ đạo hoặc kế hoạch hoạt động..." class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl dark:text-white focus:ring-2 focus:ring-[#005d39]"></textarea>
             </div>
 
             <div class="pt-4 border-t border-slate-100 dark:border-slate-700 flex items-center justify-end gap-2">
@@ -1702,7 +1750,7 @@ const Dashboard = {
                 Hủy bỏ
               </button>
               <button type="submit" class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold transition shadow-md">
-                Đăng tin tức
+                Đăng tin / Lịch công tác
               </button>
             </div>
           </form>
@@ -1715,17 +1763,18 @@ const Dashboard = {
     e.preventDefault();
     try {
       const title = document.getElementById('news-create-title').value.trim();
-      const category = 'Thông báo';
+      const news_date = document.getElementById('news-create-date').value;
+      const category = document.getElementById('news-create-category').value;
       const is_pinned = document.getElementById('news-create-pinned').checked ? 1 : 0;
       const summary = document.getElementById('news-create-summary').value.trim();
       const content = document.getElementById('news-create-content').value.trim();
 
       await apiFetch('/api/news', {
         method: 'POST',
-        body: JSON.stringify({ title, category, is_pinned, summary, content })
+        body: JSON.stringify({ title, news_date, category, is_pinned, summary, content })
       });
 
-      App.showToast('✅ Đã đăng tin tức lên Bảng Tin Hoạt Động thành công!', 'success');
+      App.showToast('✅ Đã đăng lịch công tác / tin tức lên Bảng Tin thành công!', 'success');
       App.closeModal();
       this.loadNews();
     } catch (err) {
@@ -1738,6 +1787,9 @@ const Dashboard = {
     if (!item) return;
 
     const modalContainer = document.getElementById('modal-container');
+    const defaultDate = item.news_date || (item.created_at ? item.created_at.split(' ')[0] : new Date().toISOString().split('T')[0]);
+    const currentCategory = item.category || 'Lịch công tác';
+
     modalContainer.innerHTML = `
       <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
         <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-5 my-8">
@@ -1749,10 +1801,10 @@ const Dashboard = {
               </span>
               <div>
                 <h3 class="text-lg font-extrabold text-slate-800 dark:text-white">
-                  Chỉnh Sửa Tin Tức
+                  Chỉnh Sửa Lịch Công Tác & Tin Tức
                 </h3>
                 <p class="text-xs text-slate-500 dark:text-slate-400">
-                  Cập nhật nội dung tin tức đã đăng
+                  Cập nhật nội dung, ngày tháng hoặc chuyên mục
                 </p>
               </div>
             </div>
@@ -1763,8 +1815,32 @@ const Dashboard = {
 
           <form onsubmit="Dashboard.submitEditNews(event, ${newsId})" class="space-y-4 text-xs">
             <div>
-              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tiêu đề tin tức *</label>
+              <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1">Tiêu đề tin tức / Lịch công tác *</label>
               <input type="text" id="news-edit-title" required value="${item.title.replace(/"/g, '&quot;')}" class="w-full px-3.5 py-2.5 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl font-bold dark:text-white focus:ring-2 focus:ring-[#005d39]">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                  <i class="ph-bold ph-calendar text-blue-600 dark:text-blue-400"></i>
+                  <span>Ngày tháng (Lịch / Thông báo) *</span>
+                </label>
+                <input type="date" id="news-edit-date" value="${defaultDate}" required class="w-full px-3.5 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl font-bold dark:text-white focus:ring-2 focus:ring-[#005d39]">
+              </div>
+
+              <div>
+                <label class="block font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                  <i class="ph-bold ph-tag text-blue-600 dark:text-blue-400"></i>
+                  <span>Phân loại chuyên mục *</span>
+                </label>
+                <select id="news-edit-category" class="w-full px-3.5 py-2 bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl font-bold dark:text-white focus:ring-2 focus:ring-[#005d39]">
+                  <option value="Lịch công tác" ${currentCategory === 'Lịch công tác' ? 'selected' : ''}>📅 Lịch công tác</option>
+                  <option value="Thông báo" ${currentCategory === 'Thông báo' ? 'selected' : ''}>📢 Thông báo</option>
+                  <option value="Kế hoạch đào tạo" ${currentCategory === 'Kế hoạch đào tạo' ? 'selected' : ''}>🎓 Kế hoạch đào tạo</option>
+                  <option value="Sự kiện nội bộ" ${currentCategory === 'Sự kiện nội bộ' ? 'selected' : ''}>🚩 Sự kiện nội bộ</option>
+                  <option value="Chỉ đạo điều hành" ${currentCategory === 'Chỉ đạo điều hành' ? 'selected' : ''}>⚖️ Chỉ đạo điều hành</option>
+                </select>
+              </div>
             </div>
 
             <div class="flex items-center">
@@ -1802,17 +1878,18 @@ const Dashboard = {
     e.preventDefault();
     try {
       const title = document.getElementById('news-edit-title').value.trim();
-      const category = 'Thông báo';
+      const news_date = document.getElementById('news-edit-date').value;
+      const category = document.getElementById('news-edit-category').value;
       const is_pinned = document.getElementById('news-edit-pinned').checked ? 1 : 0;
       const summary = document.getElementById('news-edit-summary').value.trim();
       const content = document.getElementById('news-edit-content').value.trim();
 
       await apiFetch(`/api/news/${newsId}`, {
         method: 'PUT',
-        body: JSON.stringify({ title, category, is_pinned, summary, content })
+        body: JSON.stringify({ title, news_date, category, is_pinned, summary, content })
       });
 
-      App.showToast('✅ Đã cập nhật tin tức thành công!', 'success');
+      App.showToast('✅ Đã cập nhật tin tức / lịch công tác thành công!', 'success');
       App.closeModal();
       this.loadNews();
     } catch (err) {

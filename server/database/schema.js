@@ -236,16 +236,19 @@ async function initDB() {
       title TEXT NOT NULL,
       content TEXT NOT NULL,
       summary TEXT,
-      category TEXT DEFAULT 'Thông báo',
+      category TEXT DEFAULT 'Lịch công tác',
       badge_color TEXT DEFAULT 'emerald',
       author_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       author_name TEXT,
       is_pinned INTEGER DEFAULT 0,
       image_url TEXT,
+      news_date TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  await safeAddColumn('news', 'news_date', 'TEXT');
 
   // AUTO SEED IF EMPTY
   try {

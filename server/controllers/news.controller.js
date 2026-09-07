@@ -23,7 +23,7 @@ const NewsController = {
 
   async create(req, res) {
     try {
-      const { title, summary, content, category, badge_color, is_pinned, image_url } = req.body;
+      const { title, summary, content, category, badge_color, is_pinned, image_url, news_date } = req.body;
       if (!title || !content) {
         return res.status(400).json({ error: 'Vui lòng nhập tiêu đề và nội dung bản tin' });
       }
@@ -32,12 +32,13 @@ const NewsController = {
         title,
         summary,
         content,
-        category: category || 'Thông báo',
+        category: category || 'Lịch công tác',
         badge_color: badge_color || 'emerald',
         author_id: req.user.id,
         author_name: req.user.full_name || 'Ban Quản trị',
         is_pinned: is_pinned ? 1 : 0,
-        image_url
+        image_url,
+        news_date: news_date || null
       });
 
       const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
@@ -53,9 +54,9 @@ const NewsController = {
   async update(req, res) {
     try {
       const newsId = parseInt(req.params.id);
-      const { title, summary, content, category, badge_color, is_pinned, image_url } = req.body;
+      const { title, summary, content, category, badge_color, is_pinned, image_url, news_date } = req.body;
       const updated = await NewsRepository.update(newsId, {
-        title, summary, content, category, badge_color, is_pinned, image_url
+        title, summary, content, category, badge_color, is_pinned, image_url, news_date
       });
 
       const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;

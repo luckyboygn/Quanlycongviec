@@ -6,7 +6,7 @@ const NewsRepository = {
       SELECT n.*, u.full_name as author_full_name, u.role as author_role
       FROM news n
       LEFT JOIN users u ON n.author_id = u.id
-      ORDER BY n.is_pinned DESC, n.created_at DESC
+      ORDER BY n.is_pinned DESC, COALESCE(n.news_date, substr(n.created_at, 1, 10)) DESC, n.created_at DESC
     `);
   },
 
@@ -19,25 +19,26 @@ const NewsRepository = {
     `, [id]);
   },
 
-  async create({ title, summary, content, category, badge_color, author_id, author_name, is_pinned, image_url }) {
+  async create({ title, summary, content, category, badge_color, author_id, author_name, is_pinned, image_url, news_date }) {
     const res = await db.runAsync(`
-      INSERT INTO news (title, summary, content, category, badge_color, author_id, author_name, is_pinned, image_url, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      INSERT INTO news (title, summary, content, category, badge_color, author_id, author_name, is_pinned, image_url, news_date, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
     `, [
       title,
       summary || (content.length > 180 ? content.substring(0, 180) + '...' : content),
       content,
-      category || 'Thông báo',
+      category || 'Lịch công tác',
       badge_color || 'emerald',
       author_id || null,
       author_name || 'Ban Quản trị',
       is_pinned ? 1 : 0,
-      image_url || null
+      image_url || null,
+      news_date || null
     ]);
     return res.lastID;
   },
 
-  async update(id, { title, summary, content, category, badge_color, is_pinned, image_url }) {
+  async update(id, { title, summary, content, category, badge_color, is_pinned, image_url, news_date }) {
     await db.runAsync(`
       UPDATE news
       SET title = COALESCE(?, title),
@@ -47,9 +48,10 @@ const NewsRepository = {
           badge_color = COALESCE(?, badge_color),
           is_pinned = COALESCE(?, is_pinned),
           image_url = COALESCE(?, image_url),
+          news_date = COALESCE(?, news_date),
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `, [title, summary, content, category, badge_color, is_pinned, image_url, id]);
+    `, [title, summary, content, category, badge_color, is_pinned, image_url, news_date || null, id]);
     return await this.findById(id);
   },
 
