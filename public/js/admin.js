@@ -33,16 +33,19 @@ const Admin = {
             </p>
           </div>
           <div class="flex items-center flex-wrap gap-2.5">
-            <button onclick="Admin.exportAllUsersToExcel()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition transform hover:scale-102" title="Xuất toàn bộ thông tin người dùng / cán bộ trên hệ thống ra file Excel (.xlsx)">
-              <i class="ph-bold ph-download-simple text-base"></i> Xuất danh sách người dùng (.xlsx)
+            <button onclick="Admin.downloadBackup()" class="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition transform hover:scale-102" title="Tải toàn bộ dữ liệu hệ thống (User, Việc, Nhật ký, Tin nhắn) về máy tính">
+              <i class="ph-bold ph-cloud-arrow-down text-base"></i> Sao lưu hệ thống (.json)
             </button>
-            <button onclick="Admin.downloadExcelTemplate()" class="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition border border-slate-200 dark:border-slate-600" title="Tải file Excel mẫu để điền danh sách cán bộ">
-              <i class="ph-bold ph-file-arrow-down text-emerald-600 text-base"></i> Tải file mẫu Excel
+            <button onclick="Admin.openRestoreModal()" class="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition" title="Khôi phục toàn bộ hệ thống từ file sao lưu">
+              <i class="ph-bold ph-cloud-arrow-up text-base"></i> Phục hồi dữ liệu
+            </button>
+            <button onclick="Admin.exportAllUsersToExcel()" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition transform hover:scale-102" title="Xuất toàn bộ thông tin người dùng / cán bộ trên hệ thống ra file Excel (.xlsx)">
+              <i class="ph-bold ph-download-simple text-base"></i> Xuất Excel (.xlsx)
             </button>
             <button onclick="Admin.openImportExcelModal()" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition" title="Nhập danh sách cán bộ hàng loạt từ file Excel">
-              <i class="ph-bold ph-file-arrow-up text-base"></i> Nhập từ Excel (.xlsx)
+              <i class="ph-bold ph-file-arrow-up text-base"></i> Nhập Excel
             </button>
-            <button onclick="Admin.openCreateModal()" class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition">
+            <button onclick="Admin.openCreateModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white dark:bg-purple-600 dark:hover:bg-purple-700 text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition">
               <i class="ph-bold ph-plus text-base"></i> <span id="admin-create-btn-label">Tạo tài khoản mới</span>
             </button>
           </div>
@@ -50,15 +53,18 @@ const Admin = {
 
         <!-- Admin Tabs -->
         <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex items-center justify-between">
-          <div class="flex items-center bg-slate-100 dark:bg-slate-700 p-1 rounded-xl">
-            <button onclick="Admin.setTab('users')" id="adm-tab-users" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-sm flex items-center gap-2">
+          <div class="flex items-center bg-slate-100 dark:bg-slate-700 p-1 rounded-xl overflow-x-auto custom-scrollbar">
+            <button onclick="Admin.setTab('users')" id="adm-tab-users" class="px-4 py-2 rounded-lg text-xs font-bold transition bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-sm flex items-center gap-2 whitespace-nowrap">
               <i class="ph-bold ph-users"></i> Quản lý Người dùng
             </button>
-            <button onclick="Admin.setTab('departments')" id="adm-tab-departments" class="px-4 py-2 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-300 flex items-center gap-2">
+            <button onclick="Admin.setTab('departments')" id="adm-tab-departments" class="px-4 py-2 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-300 flex items-center gap-2 whitespace-nowrap">
               <i class="ph-bold ph-buildings"></i> 5 Phòng Ban
             </button>
-            <button onclick="Admin.setTab('logs')" id="adm-tab-logs" class="px-4 py-2 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-300 flex items-center gap-2">
-              <i class="ph-bold ph-clock-counter-clockwise"></i> Nhật ký Hoạt động (Audit Log)
+            <button onclick="Admin.setTab('backup')" id="adm-tab-backup" class="px-4 py-2 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-300 flex items-center gap-2 whitespace-nowrap">
+              <i class="ph-bold ph-database"></i> Sao lưu & Phục hồi
+            </button>
+            <button onclick="Admin.setTab('logs')" id="adm-tab-logs" class="px-4 py-2 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-300 flex items-center gap-2 whitespace-nowrap">
+              <i class="ph-bold ph-clock-counter-clockwise"></i> Nhật ký Hoạt động
             </button>
           </div>
         </div>
@@ -83,13 +89,13 @@ const Admin = {
 
   setTab(tab) {
     this.activeTab = tab;
-    ['users', 'departments', 'logs'].forEach(t => {
+    ['users', 'departments', 'backup', 'logs'].forEach(t => {
       const btn = document.getElementById(`adm-tab-${t}`);
       if (btn) {
         if (t === tab) {
-          btn.className = 'px-4 py-2 rounded-lg text-xs font-bold transition bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-sm flex items-center gap-2';
+          btn.className = 'px-4 py-2 rounded-lg text-xs font-bold transition bg-white dark:bg-slate-800 text-purple-600 dark:text-purple-400 shadow-sm flex items-center gap-2 whitespace-nowrap';
         } else {
-          btn.className = 'px-4 py-2 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-300 flex items-center gap-2';
+          btn.className = 'px-4 py-2 rounded-lg text-xs font-bold transition text-slate-600 dark:text-slate-300 flex items-center gap-2 whitespace-nowrap';
         }
       }
     });
@@ -98,6 +104,7 @@ const Admin = {
     if (createLabel) {
       if (tab === 'users') createLabel.innerText = 'Tạo tài khoản mới';
       else if (tab === 'departments') createLabel.innerText = 'Thêm phòng ban mới';
+      else if (tab === 'backup') createLabel.innerText = 'Tải bản sao lưu';
       else createLabel.innerText = 'Tạo mới';
     }
 
@@ -112,6 +119,8 @@ const Admin = {
       await this.renderUsersTab(container);
     } else if (this.activeTab === 'departments') {
       await this.renderDepartmentsTab(container);
+    } else if (this.activeTab === 'backup') {
+      await this.renderBackupTab(container);
     } else if (this.activeTab === 'logs') {
       await this.renderLogsTab(container);
     }
@@ -1526,7 +1535,305 @@ const Admin = {
         submitBtn.innerHTML = '<i class="ph-bold ph-check"></i> Lưu và Tạo tài khoản';
       }
     }
+  },
+
+  // 4. Backup & Restore Tab
+  async renderBackupTab(container) {
+    let stats = { users: 0, depts: 5, tasks: 0, logs: 0 };
+    try {
+      const users = await apiFetch('/api/users');
+      const depts = await apiFetch('/api/departments');
+      stats.users = users.length;
+      stats.depts = depts.length;
+    } catch (e) {}
+
+    container.innerHTML = `
+      <div class="space-y-6">
+        <!-- Overview Banner -->
+        <div class="bg-gradient-to-r from-purple-900/40 via-indigo-900/30 to-slate-900/50 p-6 rounded-3xl border border-purple-500/30 shadow-lg">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 class="text-xl font-black text-white flex items-center gap-2.5">
+                <i class="ph-bold ph-shield-check text-emerald-400 text-2xl"></i>
+                Trung tâm Sao lưu & Khôi phục Dữ liệu (Backup & Disaster Recovery)
+              </h2>
+              <p class="text-xs text-purple-200/80 mt-1 max-w-3xl leading-relaxed">
+                Cho phép Quản trị viên trích xuất toàn bộ dữ liệu hệ thống (Tài khoản người dùng, phân quyền, 5 phòng ban, nhiệm vụ được giao, nhật ký kê khai, báo cáo và trao đổi nội bộ) về máy tính an toàn, sẵn sàng phục hồi bất kỳ lúc nào chỉ bằng 1 thao tác.
+              </p>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/40 rounded-xl text-emerald-300 text-xs font-bold flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Sẵn sàng sao lưu
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2 Main Cards: Backup & Restore -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          
+          <!-- Card 1: Tạo bản sao lưu -->
+          <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+            <div class="space-y-4">
+              <div class="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center text-2xl">
+                <i class="ph-bold ph-cloud-arrow-down"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-slate-800 dark:text-white">1. Sao lưu Toàn bộ Dữ liệu</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Trích xuất và tải về một tệp dữ liệu chuẩn <span class="font-mono text-purple-600 dark:text-purple-400 font-bold">.json</span> chứa trọn vẹn mọi bảng dữ liệu thực tế đang chạy trên máy chủ.
+                </p>
+              </div>
+              <div class="p-4 bg-slate-50 dark:bg-slate-700/40 rounded-2xl border border-slate-100 dark:border-slate-700 space-y-2 text-xs text-slate-600 dark:text-slate-300">
+                <div class="font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                  <i class="ph-bold ph-check-circle text-emerald-500"></i> Dữ liệu bao gồm:
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-500 dark:text-slate-400">
+                  <div>• Danh sách Cán bộ & Mật khẩu</div>
+                  <div>• 5 Phòng ban cơ cấu</div>
+                  <div>• Công việc & Phân công</div>
+                  <div>• Bảng kê khai nhật ký</div>
+                  <div>• Báo cáo định kỳ các phòng</div>
+                  <div>• Lịch sử tin nhắn trao đổi</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="pt-6">
+              <button onclick="Admin.downloadBackup()" class="w-full py-3.5 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs rounded-2xl shadow-lg shadow-purple-600/20 flex items-center justify-center gap-2 transition transform hover:scale-[1.01]">
+                <i class="ph-bold ph-download-simple text-base"></i> Tải về Bản sao lưu Hệ thống (.json)
+              </button>
+            </div>
+          </div>
+
+          <!-- Card 2: Khôi phục dữ liệu -->
+          <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+            <div class="space-y-4">
+              <div class="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center text-2xl">
+                <i class="ph-bold ph-cloud-arrow-up"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-slate-800 dark:text-white">2. Phục hồi Dữ liệu từ Tệp</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Nạp lại toàn bộ trạng thái dữ liệu từ một tệp sao lưu <span class="font-mono text-amber-600 dark:text-amber-400 font-bold">.json</span> đã lưu trữ trước đó.
+                </p>
+              </div>
+              <div class="p-4 bg-amber-50/60 dark:bg-amber-950/30 rounded-2xl border border-amber-200/60 dark:border-amber-900/40 space-y-2 text-xs text-amber-900 dark:text-amber-200">
+                <div class="font-bold flex items-center gap-1.5 text-amber-800 dark:text-amber-300">
+                  <i class="ph-bold ph-warning-circle text-amber-600"></i> Lưu ý quan trọng:
+                </div>
+                <p class="text-[11px] leading-relaxed text-amber-800/80 dark:text-amber-300/80">
+                  Khi thực hiện khôi phục, dữ liệu hiện tại sẽ được thay thế chính xác bằng dữ liệu trong tệp sao lưu. Vui lòng tải một bản sao lưu dự phòng hiện tại trước khi tiến hành!
+                </p>
+              </div>
+            </div>
+
+            <div class="pt-6">
+              <button onclick="Admin.openRestoreModal()" class="w-full py-3.5 px-4 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold text-xs rounded-2xl shadow-lg shadow-amber-600/20 flex items-center justify-center gap-2 transition transform hover:scale-[1.01]">
+                <i class="ph-bold ph-upload-simple text-base"></i> Chọn Tệp & Bắt đầu Khôi phục
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Automated Cloud Protection Notice -->
+        <div class="bg-slate-50 dark:bg-slate-800/60 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-400 flex items-start gap-3.5">
+          <i class="ph-bold ph-info text-xl text-blue-500 shrink-0 mt-0.5"></i>
+          <div class="space-y-1 leading-relaxed">
+            <div class="font-bold text-slate-800 dark:text-white">Cơ chế Bảo vệ Kép (Cloud Database + Manual Backup):</div>
+            <div>
+              Hệ thống hiện đã được liên kết với cơ sở dữ liệu đám mây PostgreSQL độc lập. Bạn có thể định kỳ tải file sao lưu <span class="font-mono text-purple-600 dark:text-purple-400 font-bold">.json</span> vào cuối mỗi tuần/tháng để lưu trữ trong ổ cứng máy tính cá nhân hoặc Google Drive của cơ quan.
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  async downloadBackup() {
+    try {
+      App.showToast('Đang tạo bản sao lưu toàn hệ thống...', 'info');
+      
+      const res = await fetch('/api/admin/backup', {
+        headers: {
+          'Authorization': `Bearer ${Auth.token}`
+        }
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Lỗi tải bản sao lưu');
+      }
+
+      const blob = await res.blob();
+      const dateTag = new Date().toISOString().replace(/[:\.]/g, '-').slice(0, 19);
+      const filename = `Backup_TheoDoiCV_Agribank_${dateTag}.json`;
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      App.showToast('Đã tải về bản sao lưu toàn hệ thống thành công!', 'success');
+    } catch (err) {
+      App.showToast(err.message, 'error');
+    }
+  },
+
+  openRestoreModal() {
+    const modal = document.getElementById('app-modal');
+    if (!modal) return;
+
+    modal.innerHTML = `
+      <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 max-w-lg w-full border border-slate-200 dark:border-slate-700 shadow-2xl space-y-5 animate-scale-up">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-4">
+          <h3 class="text-base font-extrabold text-slate-800 dark:text-white flex items-center gap-2">
+            <i class="ph-bold ph-cloud-arrow-up text-amber-600 text-xl"></i> Khôi phục Dữ liệu Toàn Hệ thống
+          </h3>
+          <button onclick="App.closeModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-xl">
+            <i class="ph-bold ph-x text-lg"></i>
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Chọn tệp sao lưu định dạng <span class="font-mono text-purple-600 font-bold">.json</span> đã tải về trước đó để phục hồi toàn bộ hệ thống.
+          </p>
+
+          <!-- Drop Area -->
+          <div class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-2xl p-6 text-center hover:border-amber-500 transition cursor-pointer" onclick="document.getElementById('restore-file-input').click()">
+            <input type="file" id="restore-file-input" accept=".json" class="hidden" onchange="Admin.handleRestoreFileSelect(event)">
+            <i class="ph-bold ph-file-code text-4xl text-amber-500 mb-2"></i>
+            <div id="restore-file-name" class="font-bold text-xs text-slate-700 dark:text-slate-200">Bấm vào đây để chọn tệp .json sao lưu</div>
+            <div class="text-[10px] text-slate-400 mt-1">Hỗ trợ tệp JSON sao lưu xuất từ hệ thống</div>
+          </div>
+
+          <!-- Preview Info Box (Hidden until file selected) -->
+          <div id="restore-preview-box" class="hidden p-4 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-600 text-xs space-y-2">
+            <div class="font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+              <i class="ph-bold ph-check-circle text-emerald-500"></i> Thông tin bản sao lưu:
+            </div>
+            <div id="restore-preview-stats" class="text-[11px] text-slate-600 dark:text-slate-300 space-y-1"></div>
+          </div>
+
+          <div id="restore-error-box" class="hidden p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl text-xs text-rose-600 dark:text-rose-400 font-medium"></div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-700">
+          <button type="button" onclick="App.closeModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs transition">
+            Hủy bỏ
+          </button>
+          <button type="button" id="btn-execute-restore" onclick="Admin.executeRestore()" disabled class="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl font-bold text-xs shadow-md shadow-amber-600/20 transition flex items-center gap-1.5">
+            <i class="ph-bold ph-arrows-counter-clockwise text-base"></i> Tiến hành Khôi phục
+          </button>
+        </div>
+      </div>
+    `;
+
+    window._selectedRestoreData = null;
+    modal.classList.remove('hidden');
+  },
+
+  handleRestoreFileSelect(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    const nameEl = document.getElementById('restore-file-name');
+    const previewBox = document.getElementById('restore-preview-box');
+    const previewStats = document.getElementById('restore-preview-stats');
+    const errorBox = document.getElementById('restore-error-box');
+    const submitBtn = document.getElementById('btn-execute-restore');
+
+    if (errorBox) errorBox.classList.add('hidden');
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const json = JSON.parse(e.target.result);
+        if (!json || !json.data) {
+          throw new Error('Cấu trúc file không đúng định dạng sao lưu hệ thống!');
+        }
+
+        window._selectedRestoreData = json;
+        if (nameEl) nameEl.innerText = `📄 ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+        
+        if (previewBox && previewStats) {
+          const s = json.stats || {};
+          previewStats.innerHTML = `
+            <div>• <b>Thời điểm tạo:</b> ${json.exported_at ? new Date(json.exported_at).toLocaleString('vi-VN') : 'Không rõ'}</div>
+            <div>• <b>Người xuất:</b> ${json.exported_by?.full_name || 'Admin'}</div>
+            <div class="pt-1 border-t border-slate-200 dark:border-slate-600 grid grid-cols-2 gap-1 text-[11px]">
+              <span>👤 Cán bộ: <b>${s.users || json.data.users?.length || 0}</b></span>
+              <span>🏢 Phòng ban: <b>${s.departments || json.data.departments?.length || 0}</b></span>
+              <span>📋 Công việc: <b>${s.tasks || json.data.tasks?.length || 0}</b></span>
+              <span>📝 Nhật ký: <b>${s.personal_work_logs || json.data.personal_work_logs?.length || 0}</b></span>
+              <span>💬 Tin nhắn: <b>${s.messages || json.data.messages?.length || 0}</b></span>
+              <span>📰 Tin tức: <b>${s.news || json.data.news?.length || 0}</b></span>
+            </div>
+          `;
+          previewBox.classList.remove('hidden');
+        }
+
+        if (submitBtn) submitBtn.disabled = false;
+      } catch (err) {
+        if (errorBox) {
+          errorBox.innerText = 'Lỗi đọc tệp: ' + err.message;
+          errorBox.classList.remove('hidden');
+        }
+        if (submitBtn) submitBtn.disabled = true;
+      }
+    };
+    reader.readAsText(file);
+  },
+
+  async executeRestore() {
+    if (!window._selectedRestoreData) {
+      alert('Vui lòng chọn tệp sao lưu hợp lệ!');
+      return;
+    }
+
+    if (!confirm('⚠️ CẢNH BÁO BẢO MẬT:\nBạn có chắc chắn muốn khôi phục toàn bộ hệ thống từ tệp này không?\nDữ liệu hiện tại sẽ được cập nhật hoàn toàn theo tệp sao lưu.')) {
+      return;
+    }
+
+    const submitBtn = document.getElementById('btn-execute-restore');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="ph ph-spinner animate-spin text-base"></i> Đang khôi phục...';
+    }
+
+    try {
+      const res = await apiFetch('/api/admin/restore', {
+        method: 'POST',
+        body: JSON.stringify(window._selectedRestoreData)
+      });
+
+      App.showToast(res.message || 'Khôi phục thành công!', 'success');
+      App.closeModal();
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 1200);
+    } catch (err) {
+      const errorBox = document.getElementById('restore-error-box');
+      if (errorBox) {
+        errorBox.innerText = 'Lỗi khôi phục: ' + err.message;
+        errorBox.classList.remove('hidden');
+      } else {
+        alert(err.message);
+      }
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="ph-bold ph-arrows-counter-clockwise text-base"></i> Tiến hành Khôi phục';
+      }
+    }
   }
 };
+
 
 
