@@ -223,11 +223,28 @@ async function initDB() {
   await safeAddColumn('messages', 'is_recalled', 'INTEGER DEFAULT 0');
 
   try {
-    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_msg_sender ON messages(sender_id)`);
-    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_msg_receiver ON messages(receiver_id)`);
-    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_msg_channel ON messages(channel)`);
-    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_logs_user_date ON personal_work_logs(user_id, start_date)`);
-    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_tasks_dept_status ON tasks(department_id, status)`);
+    // Indexes on messages
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_msg_sender_receiver ON messages(sender_id, receiver_id, created_at)`);
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_msg_receiver_sender ON messages(receiver_id, sender_id, created_at)`);
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_msg_receiver_read ON messages(receiver_id, is_read)`);
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_msg_channel_created ON messages(channel, created_at)`);
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_msg_created_at ON messages(created_at)`);
+
+    // Indexes on personal work logs
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_pwl_user_dates ON personal_work_logs(user_id, start_date, end_date)`);
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_pwl_dept_user ON personal_work_logs(department_id, user_id)`);
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_pwl_supervisor ON personal_work_logs(supervisor_id, approval_status)`);
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_pwl_auto_complete ON personal_work_logs(status, auto_complete, end_date)`);
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_pwl_status_dates ON personal_work_logs(status, start_date, end_date)`);
+
+    // Indexes on tasks & task assignees
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_tasks_dept_status_due ON tasks(department_id, status, due_date)`);
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_tasks_created_by ON tasks(created_by)`);
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_task_assignees_user ON task_assignees(user_id, task_id)`);
+
+    // Indexes on notifications & users
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_notif_user_read ON notifications(user_id, is_read, created_at)`);
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_users_dept_status ON users(department_id, status)`);
   } catch (e) {}
 
   // 11. News & Activity Bulletin Board table

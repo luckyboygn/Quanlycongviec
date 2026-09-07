@@ -451,16 +451,20 @@ const Chat = {
     `;
   },
 
+  filterDebounceTimer: null,
   filterContacts(query) {
-    const q = (query || '').toLowerCase().trim();
-    if (!q) {
-      this.renderContactsList();
-      return;
-    }
-    const filtered = this.contacts.filter(c => 
-      (c.full_name + ' ' + (c.department_name || '') + ' ' + (c.position || '') + ' ' + c.role).toLowerCase().includes(q)
-    );
-    this.renderContactsList(filtered);
+    if (this.filterDebounceTimer) clearTimeout(this.filterDebounceTimer);
+    this.filterDebounceTimer = setTimeout(() => {
+      const q = (query || '').toLowerCase().trim();
+      if (!q) {
+        this.renderContactsList();
+        return;
+      }
+      const filtered = this.contacts.filter(c => 
+        ((c.full_name || '') + ' ' + (c.department_name || '') + ' ' + (c.position || '') + ' ' + (c.role || '')).toLowerCase().includes(q)
+      );
+      this.renderContactsList(filtered);
+    }, 120);
   },
 
   async selectContact(contactId) {

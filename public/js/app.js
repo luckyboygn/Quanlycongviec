@@ -396,6 +396,12 @@ const App = {
       view = 'dashboard';
     }
 
+    // Clean up Chat timers if leaving chat view to avoid background overhead
+    if (view !== 'chat' && window.Chat) {
+      if (Chat.pollTimer) { clearInterval(Chat.pollTimer); Chat.pollTimer = null; }
+      if (Chat.contactsPollTimer) { clearInterval(Chat.contactsPollTimer); Chat.contactsPollTimer = null; }
+    }
+
     this.currentView = view;
     this.renderSidebar();
 

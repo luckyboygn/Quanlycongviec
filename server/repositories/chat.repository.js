@@ -4,31 +4,37 @@ const PresenceTracker = require('../utils/presence');
 const ChatRepository = {
   async getContacts(currentUserId) {
     const contacts = await db.allAsync(`
-      SELECT u.id, u.full_name, u.position, u.role, u.department_id,
-             d.name as department_name, d.code as department_code
+      SELECT 
+        u.id, u.full_name, u.position, u.role, u.department_id,
+        d.name as department_name, d.code as department_code,
+        (
+          SELECT m.content FROM messages m 
+          WHERE ((m.sender_id = ? AND m.receiver_id = u.id) OR (m.sender_id = u.id AND m.receiver_id = ?))
+          ORDER BY m.created_at DESC LIMIT 1
+        ) as last_message,
+        (
+          SELECT m.created_at FROM messages m 
+          WHERE ((m.sender_id = ? AND m.receiver_id = u.id) OR (m.sender_id = u.id AND m.receiver_id = ?))
+          ORDER BY m.created_at DESC LIMIT 1
+        ) as last_message_time,
+        (
+          SELECT m.sender_id FROM messages m 
+          WHERE ((m.sender_id = ? AND m.receiver_id = u.id) OR (m.sender_id = u.id AND m.receiver_id = ?))
+          ORDER BY m.created_at DESC LIMIT 1
+        ) as last_sender_id,
+        COALESCE((
+          SELECT COUNT(*) FROM messages m 
+          WHERE m.sender_id = u.id AND m.receiver_id = ? AND m.is_read = 0
+        ), 0) as unread_count
       FROM users u
       LEFT JOIN departments d ON u.department_id = d.id
       WHERE u.id != ? AND (u.status = 'active' OR u.status IS NULL OR u.status != 'locked')
-    `, [currentUserId]);
+    `, [currentUserId, currentUserId, currentUserId, currentUserId, currentUserId, currentUserId, currentUserId, currentUserId]);
 
     for (const c of contacts) {
       c.is_online = PresenceTracker.isOnline(c.id);
-
-      const lastMsg = await db.getAsync(`
-        SELECT content, created_at, sender_id
-        FROM messages
-        WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
-        ORDER BY created_at DESC LIMIT 1
-      `, [currentUserId, c.id, c.id, currentUserId]);
-      c.last_message = lastMsg ? lastMsg.content : '';
-      c.last_message_time = lastMsg ? lastMsg.created_at : null;
-      c.last_sender_id = lastMsg ? lastMsg.sender_id : null;
-
-      const unread = await db.getAsync(`
-        SELECT COUNT(*) as count FROM messages
-        WHERE sender_id = ? AND receiver_id = ? AND is_read = 0
-      `, [c.id, currentUserId]);
-      c.unread_count = unread ? unread.count : 0;
+      c.last_message = c.last_message || '';
+      c.unread_count = parseInt(c.unread_count || 0);
     }
 
     // Sắp xếp: Cán bộ có tin nhắn mới nhất / tin nhắn chưa đọc nổi lên ĐẦU TIÊN
@@ -40,7 +46,7 @@ const ChatRepository = {
       }
       if (a.last_message_time && !b.last_message_time) return -1;
       if (!a.last_message_time && b.last_message_time) return 1;
-      return (a.department_id || 0) - (b.department_id || 0) || a.full_name.localeCompare(b.full_name);
+      return (a.department_id || 0) - (b.department_id || 0) || (a.full_name || '').localeCompare(b.full_name || '');
     });
 
     const lastGenMsg = await db.getAsync(`

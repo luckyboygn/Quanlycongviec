@@ -81,10 +81,11 @@ if (databaseUrl) {
   const sqliteDb = new sqlite3.Database(DB_PATH);
   sqliteDb.serialize(() => {
     sqliteDb.run('PRAGMA journal_mode = WAL;');
-    sqliteDb.run('PRAGMA busy_timeout = 5000;');
+    sqliteDb.run('PRAGMA busy_timeout = 10000;');
     sqliteDb.run('PRAGMA synchronous = NORMAL;');
-    sqliteDb.run('PRAGMA cache_size = -20000;');
+    sqliteDb.run('PRAGMA cache_size = -64000;');
     sqliteDb.run('PRAGMA temp_store = MEMORY;');
+    sqliteDb.run('PRAGMA mmap_size = 268435456;');
   });
 
   db.isPostgres = false;
