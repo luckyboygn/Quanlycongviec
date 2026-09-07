@@ -369,7 +369,7 @@ const App = {
           <!-- Current User Profile & Role Badge (Click directly to edit own profile) -->
           <div class="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-700">
             <button onclick="App.openSelfProfileModal()" class="flex items-center gap-2.5 p-1.5 -my-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700/60 transition group cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-slate-600" title="Nhấp vào đây để xem và sửa thông tin cá nhân của bạn">
-              <div class="w-9 h-9 rounded-xl bg-gradient-to-tr ${role === 'director' ? 'from-amber-500 to-orange-600' : role === 'admin' ? 'from-purple-600 to-indigo-600' : role === 'manager' ? 'from-blue-600 to-cyan-600' : 'from-emerald-600 to-teal-600'} text-white font-bold flex items-center justify-center text-sm shadow-sm group-hover:scale-105 transition shrink-0">
+              <div class="w-9 h-9 rounded-xl bg-gradient-to-tr ${role === 'director' ? 'from-amber-500 to-orange-600' : role === 'admin' ? 'from-purple-600 to-indigo-600' : role === 'manager' ? 'from-blue-600 to-cyan-600' : role === 'auditor' ? 'from-teal-600 to-emerald-600' : 'from-emerald-600 to-teal-600'} text-white font-bold flex items-center justify-center text-sm shadow-sm group-hover:scale-105 transition shrink-0">
                 ${Auth.user.full_name.split(' ').pop()[0]}
               </div>
               <div class="hidden md:block text-left text-xs">
@@ -377,9 +377,9 @@ const App = {
                   <span>${Auth.user.full_name}</span>
                   <i class="ph-bold ph-pencil-simple text-[11px] opacity-60 group-hover:opacity-100 text-emerald-600 dark:text-emerald-400 transition"></i>
                 </div>
-                <div class="text-[10px] ${role === 'director' ? 'text-amber-600 dark:text-amber-400' : role === 'admin' ? 'text-purple-600 dark:text-purple-400' : role === 'manager' ? 'text-blue-600 dark:text-blue-400' : 'text-emerald-600 dark:text-emerald-400'} font-bold uppercase flex items-center gap-1">
+                <div class="text-[10px] ${role === 'director' ? 'text-amber-600 dark:text-amber-400' : role === 'admin' ? 'text-purple-600 dark:text-purple-400' : role === 'manager' ? 'text-blue-600 dark:text-blue-400' : role === 'auditor' ? 'text-teal-600 dark:text-teal-400' : 'text-emerald-600 dark:text-emerald-400'} font-bold uppercase flex items-center gap-1">
                   <i class="ph-bold ph-user-circle text-xs"></i>
-                  ${role === 'director' ? '🏛️ Ban Giám đốc' : role === 'admin' ? '👑 Admin' : role === 'manager' ? '⭐ Trưởng phòng' : '👤 Nhân viên'}
+                  ${role === 'director' ? '🏛️ Ban Giám đốc' : role === 'admin' ? '👑 Admin' : role === 'manager' ? '⭐ Trưởng phòng' : role === 'auditor' ? '🔍 Kiểm tra & Giám sát' : '👤 Nhân viên'}
                 </div>
               </div>
             </button>
@@ -404,7 +404,12 @@ const App = {
 
     let navItems = [];
 
-    if (role === 'director') {
+    if (role === 'auditor') {
+      // 0. CÁN BỘ KIỂM TRA & GIÁM SÁT TOÀN TRƯỜNG (Chỉ xuất dữ liệu khai báo)
+      navItems = [
+        { id: 'export', label: 'Xuất Dữ liệu Toàn Trường', icon: 'ph-file-xls' }
+      ];
+    } else if (role === 'director') {
       // 1. BAN GIÁM ĐỐC
       navItems = [
         { id: 'dashboard', label: 'Tổng Quan', icon: 'ph-chart-polar' },
@@ -479,7 +484,9 @@ const App = {
   },
 
   navigateTo(view) {
-    if (view === 'admin' && !Auth.isAdmin()) {
+    if (Auth.isAuditor()) {
+      view = 'export';
+    } else if (view === 'admin' && !Auth.isAdmin()) {
       view = 'dashboard';
     }
 
@@ -525,14 +532,15 @@ const App = {
     const container = document.getElementById('main-content');
     const isStaff = Auth.isStaff();
     const isManager = Auth.isManager();
-    const isDirectorOrAdmin = Auth.isDirector() || Auth.isAdmin();
+    const isAuditor = Auth.isAuditor();
+    const isDirectorOrAdmin = Auth.isDirector() || Auth.isAdmin() || isAuditor;
 
     const rawDeptName = Auth.user?.department_name || 'Phòng ban';
     const cleanDeptName = rawDeptName.startsWith('Phòng') ? rawDeptName : ('Phòng ' + rawDeptName);
 
     let logTitle = '1. Bản Kê Khai Nhật Ký Toàn Trường';
     let logDesc = 'Xuất toàn bộ công việc, giờ công của tất cả cán bộ 5 Phòng Ban toàn trường.';
-    let logBadge = 'Quyền: Toàn Trường (5 Phòng)';
+    let logBadge = isAuditor ? 'Quyền: Kiểm tra Toàn Trường (5 Phòng)' : 'Quyền: Toàn Trường (5 Phòng)';
 
     let taskTitle = '2. Báo Cáo Tiến Độ Việc Toàn Trường';
     let taskDesc = 'Xuất danh sách công việc toàn trường phân theo 5 phòng ban.';

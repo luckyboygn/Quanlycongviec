@@ -48,7 +48,7 @@ async function initDB() {
       full_name TEXT NOT NULL,
       email TEXT,
       phone TEXT,
-      role TEXT NOT NULL CHECK(role IN ('admin', 'director', 'manager', 'staff')),
+      role TEXT NOT NULL CHECK(role IN ('admin', 'director', 'manager', 'staff', 'auditor')),
       department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
       position TEXT,
       birth_date DATE,

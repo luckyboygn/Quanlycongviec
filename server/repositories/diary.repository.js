@@ -42,7 +42,7 @@ const DiaryRepository = {
     `;
     const params = [];
 
-    const isDirectorOrAdmin = user && (user.role === 'director' || user.role === 'admin');
+    const isDirectorOrAdmin = user && (user.role === 'director' || user.role === 'admin' || user.role === 'auditor');
 
     if (filter.supervisor_id) {
       sql += ` AND pwl.supervisor_id = ?`;

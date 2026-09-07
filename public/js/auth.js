@@ -55,6 +55,10 @@ const Auth = {
     return this.user && this.user.role === 'staff';
   },
 
+  isAuditor() {
+    return this.user && this.user.role === 'auditor';
+  },
+
   async login(username, password) {
     try {
       const res = await fetch('/api/auth/login', {
