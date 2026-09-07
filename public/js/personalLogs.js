@@ -14,24 +14,77 @@ const PersonalLogs = {
   cachedLogs: [],
 
   getSupervisorOptions(selectedId = null) {
-    const leaders = (this.cachedMembers || []).filter(u => ['manager', 'director', 'admin'].includes(u.role));
-    const list = leaders.length > 0 ? leaders : (this.cachedMembers || []);
+    const currentUser = Auth.user;
+    const userDeptId = currentUser?.department_id;
+    const isDirectorOrAdmin = currentUser && ['director', 'admin'].includes(currentUser.role);
+    const allMembers = this.cachedMembers || [];
+
+    // 1. Ban Giám đốc & Quản trị
+    const directors = allMembers.filter(u => 
+      ['director', 'admin'].includes(u.role) || 
+      (u.position && u.position.toLowerCase().includes('giám đốc'))
+    );
+
+    // 2. Lãnh đạo của chính phòng người dùng (Trưởng phòng, Phó phòng)
+    const deptLeaders = allMembers.filter(u => {
+      if (['director', 'admin'].includes(u.role) || (u.position && u.position.toLowerCase().includes('giám đốc'))) {
+        return false;
+      }
+      const isLeader = u.role === 'manager' || (u.position && (u.position.toLowerCase().includes('trưởng') || u.position.toLowerCase().includes('phó')));
+      if (!isLeader) return false;
+
+      // Nhân viên/Trưởng phòng chỉ thấy Lãnh đạo của chính phòng mình
+      if (isDirectorOrAdmin) return true;
+      return u.department_id == userDeptId;
+    });
 
     let html = `<option value="">-- Không gắn lãnh đạo / Chưa chỉ định --</option>`;
-    
-    list.forEach(u => {
-      let isSel = false;
-      if (selectedId !== null && selectedId !== undefined && selectedId !== '') {
-        isSel = (u.id == selectedId);
-      } else {
-        // Mặc định chọn Trưởng phòng của phòng mình
-        isSel = (Auth.user && u.department_id == Auth.user.department_id && u.role === 'manager' && u.id !== Auth.user.id);
-      }
+
+    // Nhóm 1: Lãnh đạo phòng của cán bộ
+    if (deptLeaders.length > 0) {
+      const rawDeptName = currentUser?.department_name || 'Phòng ban';
+      const cleanDeptName = rawDeptName.startsWith('Phòng') ? rawDeptName : ('Phòng ' + rawDeptName);
+      html += `<optgroup label="🏢 Lãnh đạo ${cleanDeptName}">`;
       
-      const roleName = u.position || (u.role === 'manager' ? 'Trưởng phòng' : (u.role === 'director' ? 'Ban Giám đốc' : 'Quản trị'));
-      const deptName = u.department_name || 'Agribank';
-      html += `<option value="${u.id}" ${isSel ? 'selected' : ''}>👔 ${u.full_name} (${roleName} - ${deptName})</option>`;
-    });
+      // Sắp xếp: Trưởng phòng lên trước, Phó phòng sau
+      const sortedDeptLeaders = [...deptLeaders].sort((a, b) => {
+        const isHeadA = a.position?.toLowerCase().includes('trưởng') ? 1 : 0;
+        const isHeadB = b.position?.toLowerCase().includes('trưởng') ? 1 : 0;
+        return isHeadB - isHeadA;
+      });
+
+      sortedDeptLeaders.forEach(u => {
+        let isSel = false;
+        if (selectedId !== null && selectedId !== undefined && selectedId !== '') {
+          isSel = (u.id == selectedId);
+        } else {
+          // Mặc định chọn Trưởng phòng (hoặc Phó phòng nếu bản thân là Trưởng phòng)
+          isSel = (u.department_id == userDeptId && u.position?.toLowerCase().includes('trưởng') && u.id !== currentUser?.id);
+        }
+        const rolePos = u.position || (u.role === 'manager' ? 'Trưởng/Phó phòng' : 'Cán bộ');
+        html += `<option value="${u.id}" ${isSel ? 'selected' : ''}>👔 ${u.full_name} (${rolePos})</option>`;
+      });
+      html += `</optgroup>`;
+    }
+
+    // Nhóm 2: Ban Giám đốc
+    if (directors.length > 0) {
+      html += `<optgroup label="🏛️ Ban Giám đốc & Quản trị">`;
+      directors.forEach(u => {
+        const isSel = (selectedId !== null && selectedId !== undefined && selectedId !== '') ? (u.id == selectedId) : false;
+        const rolePos = u.position || (u.role === 'director' ? 'Ban Giám đốc' : 'Ban Giám đốc / Quản trị');
+        html += `<option value="${u.id}" ${isSel ? 'selected' : ''}>🏛️ ${u.full_name} (${rolePos})</option>`;
+      });
+      html += `</optgroup>`;
+    }
+
+    // Nếu đã có selectedId trước đó mà không nằm trong danh sách trên thì thêm vào để không bị mất giá trị
+    if (selectedId && !directors.some(u => u.id == selectedId) && !deptLeaders.some(u => u.id == selectedId)) {
+      const otherUser = allMembers.find(u => u.id == selectedId);
+      if (otherUser) {
+        html += `<option value="${otherUser.id}" selected>👔 ${otherUser.full_name} (${otherUser.position || otherUser.role} - ${otherUser.department_name || ''})</option>`;
+      }
+    }
 
     return html;
   },
