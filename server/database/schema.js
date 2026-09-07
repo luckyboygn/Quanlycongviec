@@ -1,11 +1,25 @@
 const db = require('./connection');
 const bcrypt = require('bcryptjs');
+const fs = require('fs');
+const path = require('path');
+
+async function execTable(sql) {
+  let finalSql = sql;
+  if (db.isPostgres) {
+    finalSql = finalSql
+      .replace(/INTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT/gi, 'SERIAL PRIMARY KEY')
+      .replace(/DATETIME/gi, 'TIMESTAMP');
+  }
+  await db.runAsync(finalSql);
+}
 
 async function initDB() {
-  await db.runAsync('PRAGMA foreign_keys = ON');
+  if (!db.isPostgres) {
+    try { await db.runAsync('PRAGMA foreign_keys = ON'); } catch (e) {}
+  }
 
   // 1. Departments table (5 phòng ban của Trường Đào tạo cán bộ Agribank)
-  await db.runAsync(`
+  await execTable(`
     CREATE TABLE IF NOT EXISTS departments (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT UNIQUE NOT NULL,
@@ -16,7 +30,7 @@ async function initDB() {
   `);
 
   // 2. Users table (4 vai trò: admin, director, manager, staff)
-  await db.runAsync(`
+  await execTable(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
@@ -33,6 +47,7 @@ async function initDB() {
       avatar TEXT,
       status TEXT DEFAULT 'active' CHECK(status IN ('active', 'inactive', 'locked')),
       current_session_id TEXT,
+      employee_code TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -44,7 +59,7 @@ async function initDB() {
   try { await db.runAsync(`ALTER TABLE users ADD COLUMN employee_code TEXT`); } catch (e) {}
 
   // 3. Tasks table
-  await db.runAsync(`
+  await execTable(`
     CREATE TABLE IF NOT EXISTS tasks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
@@ -64,7 +79,7 @@ async function initDB() {
   `);
 
   // 4. Task Assignees table
-  await db.runAsync(`
+  await execTable(`
     CREATE TABLE IF NOT EXISTS task_assignees (
       task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -74,7 +89,7 @@ async function initDB() {
   `);
 
   // 5. Task Daily Logs table
-  await db.runAsync(`
+  await execTable(`
     CREATE TABLE IF NOT EXISTS task_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE,
@@ -87,7 +102,7 @@ async function initDB() {
   `);
 
   // 6. Reports table
-  await db.runAsync(`
+  await execTable(`
     CREATE TABLE IF NOT EXISTS reports (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -108,7 +123,7 @@ async function initDB() {
   `);
 
   // 7. Notifications table
-  await db.runAsync(`
+  await execTable(`
     CREATE TABLE IF NOT EXISTS notifications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -122,7 +137,7 @@ async function initDB() {
   `);
 
   // 8. Activity Logs table
-  await db.runAsync(`
+  await execTable(`
     CREATE TABLE IF NOT EXISTS activity_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
@@ -137,7 +152,7 @@ async function initDB() {
   `);
 
   // 9. Personal Work Logs table
-  await db.runAsync(`
+  await execTable(`
     CREATE TABLE IF NOT EXISTS personal_work_logs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
@@ -158,6 +173,10 @@ async function initDB() {
       status TEXT DEFAULT 'in_progress' CHECK(status IN ('in_progress', 'completed')),
       auto_complete INTEGER DEFAULT 1,
       completed_at DATETIME,
+      approval_status TEXT DEFAULT 'pending',
+      approved_by INTEGER,
+      approved_at DATETIME,
+      approval_comment TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
@@ -175,7 +194,7 @@ async function initDB() {
   try { await db.runAsync(`ALTER TABLE personal_work_logs ADD COLUMN approval_comment TEXT`); } catch (e) {}
 
   // 10. Messages table
-  await db.runAsync(`
+  await execTable(`
     CREATE TABLE IF NOT EXISTS messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       sender_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -201,7 +220,7 @@ async function initDB() {
   } catch (e) {}
 
   // 11. News & Activity Bulletin Board table
-  await db.runAsync(`
+  await execTable(`
     CREATE TABLE IF NOT EXISTS news (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
@@ -218,49 +237,65 @@ async function initDB() {
     )
   `);
 
+  // AUTO SEED IF EMPTY
   try {
-    const newsCount = await db.getAsync('SELECT COUNT(*) as count FROM news');
-    if (!newsCount || newsCount.count === 0) {
-      const seedNews = [
-        {
-          title: 'Kế hoạch triển khai công tác đào tạo cán bộ nguồn Quý IV/2026',
-          summary: 'Trường Đào tạo cán bộ Agribank thông báo kế hoạch tổ chức các lớp bồi dưỡng nghiệp vụ chuyên sâu và kỹ năng lãnh đạo Quý IV/2026.',
-          content: 'Căn cứ phê duyệt của Ban Lãnh đạo Agribank, Trường Đào tạo cán bộ triển khai kế hoạch đào tạo Quý IV/2026 cho các Chi nhánh trên toàn quốc. Yêu cầu các Phòng chuyên môn (QLĐT-TV, NCGD, Kế hoạch, Kế toán, Tổng hợp) khẩn trương hoàn thiện giáo trình, lịch giảng viên và điều kiện cơ sở vật chất.',
-          category: 'Thông báo',
-          badge_color: 'emerald',
-          author_name: 'Ban Giám đốc & Phòng QLĐT',
-          is_pinned: 1
-        },
-        {
-          title: 'Hội thi Giảng viên dạy giỏi toàn hệ thống Agribank năm 2026',
-          summary: 'Phát động phong trào thi đua dạy tốt - học tốt và đổi mới phương pháp giảng dạy hiện đại trong toàn thể giảng viên của Trường.',
-          content: 'Nhằm nâng cao chất lượng đào tạo và ứng dụng công nghệ trong giảng dạy số, Nhà trường phát động Hội thi Giảng viên dạy giỏi năm 2026. Tất cả giảng viên cơ hữu và kiêm chức của Trường tích cực đăng ký tham gia các chuyên đề đổi mới sáng tạo.',
-          category: 'Sự kiện nổi bật',
-          badge_color: 'amber',
-          author_name: 'Phòng Nghiên cứu - Giảng dạy',
-          is_pinned: 1
-        },
-        {
-          title: 'Chỉ đạo tăng cường kỷ cương kê khai nhật ký và tiến độ nhiệm vụ các phòng ban',
-          summary: 'Ban Giám hiệu yêu cầu tất cả cán bộ, nhân viên duy trì nghiêm túc việc kê khai giờ công và cập nhật tiến độ công việc hàng ngày.',
-          content: 'Để phục vụ đánh giá KPI chính xác và phục vụ công tác giao ban định kỳ, đề nghị toàn thể cán bộ 5 phòng ban tự kê khai nhật ký đúng khung giờ, cập nhật tiến độ việc giao trên hệ thống trước 17h00 hàng ngày.',
-          category: 'Chỉ đạo điều hành',
-          badge_color: 'rose',
-          author_name: 'Ban Giám đốc',
-          is_pinned: 0
+    const userCount = await db.getAsync('SELECT COUNT(*) as count FROM users');
+    if (!userCount || parseInt(userCount.count) === 0) {
+      console.log('🌱 Empty database detected! Performing initial seed from seed_data.json...');
+      const seedPath = path.join(__dirname, 'seed_data.json');
+      if (fs.existsSync(seedPath)) {
+        const seed = JSON.parse(fs.readFileSync(seedPath, 'utf8'));
+        
+        // 1. Departments
+        if (seed.departments && seed.departments.length > 0) {
+          for (const d of seed.departments) {
+            await db.runAsync(
+              `INSERT INTO departments (id, name, code, description) VALUES (?, ?, ?, ?)`,
+              [d.id, d.name, d.code, d.description]
+            );
+          }
+          if (db.isPostgres) {
+            try { await db.runAsync(`SELECT setval('departments_id_seq', (SELECT COALESCE(MAX(id), 1) FROM departments))`); } catch (e) {}
+          }
         }
-      ];
 
-      for (const item of seedNews) {
-        await db.runAsync(
-          `INSERT INTO news (title, summary, content, category, badge_color, author_name, is_pinned)
-           VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [item.title, item.summary, item.content, item.category, item.badge_color, item.author_name, item.is_pinned]
-        );
+        // 2. Users
+        if (seed.users && seed.users.length > 0) {
+          for (const u of seed.users) {
+            await db.runAsync(
+              `INSERT INTO users (id, employee_code, username, password, full_name, email, phone, role, department_id, position, birth_date, gender, qualification, avatar, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                u.id, u.employee_code || null, u.username, u.password, u.full_name, u.email || null, u.phone || null,
+                u.role, u.department_id || null, u.position || null, u.birth_date || null, u.gender || 'Nam',
+                u.qualification || 'Đại học', u.avatar || null, u.status || 'active'
+              ]
+            );
+          }
+          if (db.isPostgres) {
+            try { await db.runAsync(`SELECT setval('users_id_seq', (SELECT COALESCE(MAX(id), 1) FROM users))`); } catch (e) {}
+          }
+        }
+
+        // 3. News
+        if (seed.news && seed.news.length > 0) {
+          for (const n of seed.news) {
+            await db.runAsync(
+              `INSERT INTO news (id, title, summary, content, category, badge_color, author_name, is_pinned)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+              [n.id, n.title, n.summary, n.content, n.category, n.badge_color, n.author_name, n.is_pinned || 0]
+            );
+          }
+          if (db.isPostgres) {
+            try { await db.runAsync(`SELECT setval('news_id_seq', (SELECT COALESCE(MAX(id), 1) FROM news))`); } catch (e) {}
+          }
+        }
+
+        console.log('✅ Seed completed successfully: 5 departments, ' + (seed.users?.length || 0) + ' official users.');
       }
     }
-  } catch (e) {
-    console.error('Error seeding news:', e);
+  } catch (seedErr) {
+    console.error('Error checking/seeding database:', seedErr);
   }
 
   await checkAndUpdateOverdueTasks();
@@ -309,3 +344,4 @@ module.exports = {
   initDB,
   checkAndUpdateOverdueTasks
 };
+
