@@ -1138,25 +1138,6 @@
       "qualification": "Thạc sĩ",
       "current_session_id": "ab56b8dc7fff615589380cfff925c814",
       "employee_code": "CB0058"
-    },
-    {
-      "id": 59,
-      "username": "kiemtra",
-      "password": "$2a$10$XMREIin5c7M8n8w39sGoZebS04PrAAgO5p..F7PFre1xpSwKS55vm",
-      "full_name": "Cán bộ Kiểm tra & Giám sát",
-      "email": "kiemtra@agribank.com.vn",
-      "phone": "0900.000.000",
-      "role": "auditor",
-      "department_id": null,
-      "position": "Cán bộ Kiểm tra",
-      "avatar": null,
-      "status": "active",
-      "created_at": "2026-09-07 17:10:00",
-      "birth_date": "1990-01-01",
-      "gender": "Nam",
-      "qualification": "Đại học",
-      "current_session_id": null,
-      "employee_code": "AGB-KTGS"
     }
   ],
   "news": [

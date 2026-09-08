@@ -169,7 +169,8 @@ const Admin = {
                     director: 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700',
                     admin: 'bg-purple-50 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700',
                     manager: 'bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 border-blue-300 dark:border-blue-700',
-                    staff: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
+                    staff: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700',
+                    auditor: 'bg-teal-50 dark:bg-teal-950/40 text-teal-800 dark:text-teal-300 border-teal-300 dark:border-teal-700'
                   };
 
                   const isLocked = u.status === 'locked' || u.status === 'inactive';
@@ -232,6 +233,7 @@ const Admin = {
                           <option value="admin" ${u.role === 'admin' ? 'selected' : ''} class="bg-white dark:bg-slate-800 text-slate-800 dark:text-white">👑 Admin Quản trị</option>
                           <option value="manager" ${u.role === 'manager' ? 'selected' : ''} class="bg-white dark:bg-slate-800 text-slate-800 dark:text-white">⭐ Trưởng phòng</option>
                           <option value="staff" ${u.role === 'staff' ? 'selected' : ''} class="bg-white dark:bg-slate-800 text-slate-800 dark:text-white">👤 Nhân viên</option>
+                          <option value="auditor" ${u.role === 'auditor' ? 'selected' : ''} class="bg-white dark:bg-slate-800 text-slate-800 dark:text-white">🔍 Kiểm tra & Giám sát</option>
                         </select>
                       </td>
 
@@ -477,6 +479,7 @@ const Admin = {
                   <option value="manager">⭐ Cấp Trưởng phòng</option>
                   <option value="director">🏛️ Cấp Ban Giám đốc</option>
                   <option value="admin">👑 Cấp Admin Quản trị</option>
+                  <option value="auditor">🔍 Cấp Kiểm tra & Giám sát</option>
                 </select>
               </div>
             </div>
@@ -615,7 +618,8 @@ const Admin = {
         director: '🏛️ Ban Giám đốc',
         admin: '👑 Admin Quản trị',
         manager: '⭐ Trưởng phòng',
-        staff: '👤 Nhân viên'
+        staff: '👤 Nhân viên',
+        auditor: '🔍 Kiểm tra & Giám sát'
       };
 
       App.showToast(`Đang cập nhật phân quyền cho "${fullName}" sang ${roleLabels[newRole]}...`, 'info');
@@ -782,6 +786,7 @@ const Admin = {
                     <option value="manager" ${user.role === 'manager' ? 'selected' : ''}>⭐ Trưởng phòng</option>
                     <option value="director" ${user.role === 'director' ? 'selected' : ''}>🏛️ Ban Giám đốc</option>
                     <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>👑 Admin Quản trị</option>
+                    <option value="auditor" ${user.role === 'auditor' ? 'selected' : ''}>🔍 Kiểm tra & Giám sát</option>
                   </select>
                 </div>
 
@@ -1096,7 +1101,8 @@ const Admin = {
         'director': 'Ban Giám đốc',
         'admin': 'Quản trị viên (Admin)',
         'manager': 'Trưởng phòng / Lãnh đạo phòng',
-        'staff': 'Nhân viên / Giảng viên'
+        'staff': 'Nhân viên / Giảng viên',
+        'auditor': 'Kiểm tra & Giám sát'
       };
 
       const statusMap = {

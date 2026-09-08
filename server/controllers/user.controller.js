@@ -93,10 +93,10 @@ const UserController = {
     try {
       const targetId = parseInt(req.params.id);
       const { role } = req.body;
-      const validRoles = ['director', 'admin', 'manager', 'staff'];
+      const validRoles = ['director', 'admin', 'manager', 'staff', 'auditor'];
 
       if (!role || !validRoles.includes(role)) {
-        return res.status(400).json({ error: 'Cấp phân quyền không hợp lệ. Cho phép: director, admin, manager, staff' });
+        return res.status(400).json({ error: 'Cấp phân quyền không hợp lệ. Cho phép: director, admin, manager, staff, auditor' });
       }
 
       const targetUser = await UserRepository.findById(targetId);

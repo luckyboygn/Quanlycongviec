@@ -327,7 +327,7 @@ async function initDB() {
       }
     }
 
-    // 4. Ensure dedicated Auditor user exists across SQLite and Cloud PostgreSQL
+    // 4. Ensure dedicated Auditor role constraint across SQLite and Cloud PostgreSQL
     if (db.isPostgres) {
       try {
         await db.runAsync(`ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check`);
@@ -337,34 +337,10 @@ async function initDB() {
       }
     }
 
-    const existingAuditor = await db.getAsync("SELECT id, username, password, role FROM users WHERE username = 'kiemtra'");
-    const hash123456 = await bcrypt.hash('123456', 10);
-    if (!existingAuditor) {
-      await db.runAsync(
-        `INSERT INTO users (employee_code, username, password, full_name, email, phone, role, position, status, qualification, gender)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          'AGB-KTGS',
-          'kiemtra',
-          hash123456,
-          'Cán bộ Kiểm tra & Giám sát',
-          'kiemtra@agribank.com.vn',
-          '0900.000.000',
-          'auditor',
-          'Cán bộ Kiểm tra',
-          'active',
-          'Đại học',
-          'Nam'
-        ]
-      );
-      console.log('✅ Created auditor user: kiemtra / 123456');
-    } else {
-      await db.runAsync(
-        `UPDATE users SET role = 'auditor', status = 'active', password = ?, full_name = 'Cán bộ Kiểm tra & Giám sát', employee_code = 'AGB-KTGS' WHERE username = 'kiemtra'`,
-        [hash123456]
-      );
-      console.log('✅ Verified auditor user: kiemtra / 123456');
-    }
+    // Delete preset kiemtra account per user request so Admin can create any custom accounts with role 'auditor'
+    try {
+      await db.runAsync("DELETE FROM users WHERE username = 'kiemtra' OR employee_code = 'AGB-KTGS'");
+    } catch (e) {}
 
     // 5. Convert any legacy hours in personal_work_logs (<= 24) to minutes (* 60)
     try {

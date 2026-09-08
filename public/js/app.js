@@ -672,7 +672,8 @@ const App = {
       director: '🏛️ Ban Giám đốc',
       admin: '👑 Admin Quản trị',
       manager: '⭐ Trưởng phòng',
-      staff: '👤 Nhân viên'
+      staff: '👤 Nhân viên',
+      auditor: '🔍 Kiểm tra & Giám sát'
     };
 
     modalContainer.innerHTML = `

@@ -58,12 +58,12 @@ const AuthService = {
     let user;
     if (params && typeof params === 'object') {
       const { userId, username, role } = params;
-      if (userId && role && ['admin', 'director', 'manager', 'staff'].includes(role)) {
+      if (userId && role && ['admin', 'director', 'manager', 'staff', 'auditor'].includes(role)) {
         await UserRepository.update(parseInt(userId), { role });
         user = await UserRepository.findById(parseInt(userId));
       } else if (userId) {
         user = await UserRepository.findById(parseInt(userId));
-      } else if (username && role && ['admin', 'director', 'manager', 'staff'].includes(role)) {
+      } else if (username && role && ['admin', 'director', 'manager', 'staff', 'auditor'].includes(role)) {
         const u = await UserRepository.findByUsername(username);
         if (u) {
           await UserRepository.update(u.id, { role });
@@ -84,7 +84,7 @@ const AuthService = {
       }
     } else if (typeof params === 'number' || (!isNaN(params) && typeof params === 'string' && Number.isInteger(Number(params)))) {
       user = await UserRepository.findById(parseInt(params));
-    } else if (['admin', 'director', 'manager', 'staff'].includes(params)) {
+    } else if (['admin', 'director', 'manager', 'staff', 'auditor'].includes(params)) {
       const users = await UserRepository.findAll();
       user = users.find(u => u.role === params && u.status !== 'locked');
       if (!user && params === 'admin') {
@@ -130,7 +130,7 @@ const AuthService = {
   },
 
   async switchMyRole(userId, newRole, clientIp) {
-    if (!['admin', 'director', 'manager', 'staff'].includes(newRole)) {
+    if (!['admin', 'director', 'manager', 'staff', 'auditor'].includes(newRole)) {
       throw new Error('Vai trò không hợp lệ');
     }
 

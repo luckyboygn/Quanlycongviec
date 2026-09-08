@@ -10,7 +10,8 @@ module.exports = {
     ADMIN: 'admin',
     DIRECTOR: 'director',
     MANAGER: 'manager',
-    STAFF: 'staff'
+    STAFF: 'staff',
+    AUDITOR: 'auditor'
   },
   PRIORITIES: {
     LOW: 'low',
