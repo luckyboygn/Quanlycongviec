@@ -86,7 +86,7 @@ const Export = {
     try {
       App.showToast('Đang tạo file Excel...', 'info');
 
-      const isDirectorOrAdmin = Auth.isDirector() || Auth.isAdmin();
+      const isDirectorOrAdmin = Auth.isDirector() || Auth.isAdmin() || Auth.isAuditor();
       const taskQuery = isDirectorOrAdmin ? '?all_dept=1' : '';
       const tasks = await apiFetch(`/api/tasks${taskQuery}`);
 
