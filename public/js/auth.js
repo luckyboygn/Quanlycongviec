@@ -33,7 +33,7 @@ const Auth = {
       return false;
     }
     this.startInactivityTimer();
-    this.startSessionHeartbeat();
+    this.initRealtimeSocket();
     return true;
   },
 
@@ -256,30 +256,46 @@ const Auth = {
     }
   },
 
-  sessionHeartbeatTimer: null,
-
-  startSessionHeartbeat() {
-    this.stopSessionHeartbeat();
+  initRealtimeSocket() {
+    this.disconnectSocket();
     if (!this.token || !this.user) return;
+    if (typeof io === 'undefined') {
+      console.warn('⚠️ Socket.IO client library not loaded yet');
+      return;
+    }
 
-    // Check session validity every 3 seconds to instantly kick out old session if logged in on another device
-    this.sessionHeartbeatTimer = setInterval(async () => {
-      if (!this.token || !this.user) {
-        this.stopSessionHeartbeat();
-        return;
-      }
-      try {
-        await apiFetch('/api/auth/me');
-      } catch (err) {
-        // apiFetch automatically triggers Auth.logout('session_terminated') on SESSION_TAKEN_OVER
-      }
-    }, 3000);
+    try {
+      window.AppSocket = io({
+        auth: { token: this.token },
+        reconnection: true,
+        reconnectionAttempts: 10,
+        reconnectionDelay: 2000
+      });
+
+      window.AppSocket.on('connect', () => {
+        console.log('⚡ [WebSocket] Connected to Real-time server as', this.user.full_name);
+      });
+
+      // Handle real-time kick out when session is taken over on another device
+      window.AppSocket.on('auth:session_terminated', (data) => {
+        console.warn('⚠️ [WebSocket] Session terminated by server (logged in on another device):', data);
+        this.logout('session_terminated');
+      });
+
+      window.AppSocket.on('connect_error', (err) => {
+        console.warn('⚠️ [WebSocket] Connection error:', err.message);
+      });
+    } catch (e) {
+      console.error('❌ [WebSocket] Init failed:', e);
+    }
   },
 
-  stopSessionHeartbeat() {
-    if (this.sessionHeartbeatTimer) {
-      clearInterval(this.sessionHeartbeatTimer);
-      this.sessionHeartbeatTimer = null;
+  disconnectSocket() {
+    if (window.AppSocket) {
+      try {
+        window.AppSocket.disconnect();
+      } catch (e) {}
+      window.AppSocket = null;
     }
   },
 
@@ -294,12 +310,12 @@ const Auth = {
       sessionStorage.setItem('wt_admin_user_id', user.id);
     }
     this.startInactivityTimer();
-    this.startSessionHeartbeat();
+    this.initRealtimeSocket();
   },
 
   logout(reason = null) {
     this.stopInactivityTimer();
-    this.stopSessionHeartbeat();
+    this.disconnectSocket();
     localStorage.removeItem('wt_token');
     localStorage.removeItem('wt_user');
     sessionStorage.removeItem('wt_is_admin_session');

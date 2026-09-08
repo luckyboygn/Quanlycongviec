@@ -14,11 +14,144 @@ const Chat = {
   globalPollTimer: null,
   unreadCount: 0,
   selectedFile: null,
+  socketListening: false,
 
   init() {
     this.checkUnreadCount();
+    this.setupSocketListeners();
+
+    // Fallback slow unread check: only runs every 60s if WebSocket is offline and page is visible
     if (this.globalPollTimer) clearInterval(this.globalPollTimer);
-    this.globalPollTimer = setInterval(() => this.checkUnreadCount(), 10000);
+    this.globalPollTimer = setInterval(() => {
+      if (document.visibilityState === 'visible' && (!window.AppSocket || !window.AppSocket.connected)) {
+        this.checkUnreadCount();
+      }
+    }, 60000);
+  },
+
+  setupSocketListeners() {
+    if (!window.AppSocket || this.socketListening) return;
+    this.socketListening = true;
+
+    const socket = window.AppSocket;
+
+    // 1. Live Chat Message Received
+    socket.on('chat:message', (msg) => {
+      // Check if message belongs to currently active chat
+      const isCurrentChat = 
+        (this.activeContactId === 'general' && msg.channel === 'general') ||
+        (this.activeContactId === msg.channel) ||
+        (this.activeContactId === msg.sender_id || (msg.channel === 'direct' && this.activeContactId === msg.receiver_id));
+
+      if (isCurrentChat) {
+        const exists = this.messages.some(m => m.id === msg.id);
+        if (!exists) {
+          this.messages.push(msg);
+          this.renderMessages();
+          const container = document.getElementById('chat-messages-container');
+          if (container) {
+            container.scrollTop = container.scrollHeight;
+          }
+        }
+      }
+
+      // Update contact list last message
+      this.updateContactLastMessage(msg);
+
+      // If direct message from another user and not currently viewing that chat, update unread count
+      if (msg.channel === 'direct' && Auth.user && msg.receiver_id === Auth.user.id && this.activeContactId !== msg.sender_id) {
+        const contact = this.contacts.find(c => c.id === msg.sender_id);
+        if (contact) {
+          contact.unread_count = (contact.unread_count || 0) + 1;
+          this.renderContactsList();
+        }
+        this.unreadCount = (this.unreadCount || 0) + 1;
+        this.updateUnreadBadges();
+      }
+    });
+
+    // 2. Live Message Deleted
+    socket.on('chat:deleted', (data) => {
+      const idx = this.messages.findIndex(m => m.id === data.messageId);
+      if (idx !== -1) {
+        this.messages.splice(idx, 1);
+        this.renderMessages();
+      }
+    });
+
+    // 3. Live Message Recalled
+    socket.on('chat:recalled', (data) => {
+      const msg = this.messages.find(m => m.id === data.messageId);
+      if (msg) {
+        msg.is_recalled = 1;
+        msg.content = 'Tin nhắn đã được thu hồi';
+        msg.attachment_url = null;
+        msg.attachment_name = null;
+        this.renderMessages();
+      }
+    });
+
+    // 4. Live User Online/Offline Status Change
+    socket.on('user:online_change', (data) => {
+      const contact = this.contacts.find(c => c.id === data.userId);
+      if (contact) {
+        contact.is_online = data.isOnline;
+        this.renderContactsList();
+      }
+      this.updateOnlineBadges(data.onlineCount);
+    });
+
+    // 5. Initial Online Users List
+    socket.on('system:online_list', (data) => {
+      if (data && Array.isArray(data.onlineUserIds)) {
+        this.contacts.forEach(c => {
+          c.is_online = data.onlineUserIds.includes(c.id);
+        });
+        this.renderContactsList();
+        this.updateOnlineBadges(data.onlineUserIds.length);
+      }
+    });
+
+    // 6. Unread Sync
+    socket.on('chat:unread_update', () => {
+      this.checkUnreadCount();
+    });
+  },
+
+  updateContactLastMessage(msg) {
+    if (msg.channel === 'general' && this.generalChannel) {
+      this.generalChannel.last_message = msg.content;
+      this.generalChannel.last_message_time = msg.created_at;
+    } else if (msg.channel && msg.channel.startsWith('dept_')) {
+      const dChan = (this.departmentChannels || []).find(d => d.id === msg.channel);
+      if (dChan) {
+        dChan.last_message = msg.content;
+        dChan.last_message_time = msg.created_at;
+      }
+    } else {
+      const otherId = (Auth.user && msg.sender_id === Auth.user.id) ? msg.receiver_id : msg.sender_id;
+      const contact = this.contacts.find(c => c.id === otherId);
+      if (contact) {
+        contact.last_message = msg.content;
+        contact.last_message_time = msg.created_at;
+      }
+    }
+    if (document.getElementById('chat-contacts-list')) {
+      this.renderContactsList();
+    }
+  },
+
+  updateOnlineBadges(count) {
+    const badge = document.getElementById('chat-online-count-badge');
+    if (badge) {
+      const onlineTotal = count !== undefined ? count : this.contacts.filter(c => c.is_online).length;
+      badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span><span>${onlineTotal} trực tuyến</span>`;
+    }
+    const tabCount = document.getElementById('chat-tab-online-count');
+    if (tabCount) {
+      const onlineTotal = this.contacts.filter(c => c.is_online).length;
+      tabCount.innerText = onlineTotal;
+    }
   },
 
   async checkUnreadCount() {
@@ -107,16 +240,7 @@ const Chat = {
     `;
 
     await this.loadContacts();
-
-    // Auto poll contacts to update live online status and unread counters every 4 seconds
-    this.contactsPollTimer = setInterval(() => {
-      if (document.getElementById('chat-contacts-list')) {
-        this.loadContacts(true);
-      } else {
-        clearInterval(this.contactsPollTimer);
-        this.contactsPollTimer = null;
-      }
-    }, 4000);
+    this.setupSocketListeners();
 
     const urlParams = new URLSearchParams(window.location.search);
     const chatContactParam = urlParams.get('chat_contact');
@@ -485,9 +609,7 @@ const Chat = {
     this.renderContactsList();
     this.renderActiveChatWindow();
     await this.fetchMessages();
-
-    if (this.pollTimer) clearInterval(this.pollTimer);
-    this.pollTimer = setInterval(() => this.fetchMessages(true), 2500);
+    this.setupSocketListeners();
   },
 
   renderActiveChatWindow() {

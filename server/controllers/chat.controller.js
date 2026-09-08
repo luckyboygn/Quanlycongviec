@@ -1,5 +1,6 @@
 const ChatRepository = require('../repositories/chat.repository');
 const { createNotification } = require('../utils/logger');
+const { broadcastChatMessage, broadcastMessageDeleted, broadcastMessageRecalled } = require('../socket');
 
 const ChatController = {
   async getContacts(req, res) {
@@ -42,6 +43,13 @@ const ChatController = {
         is_read: 0
       });
 
+      const fullMessage = await ChatRepository.findById(msgId);
+
+      // Real-time broadcast to WebSocket clients
+      if (fullMessage) {
+        broadcastChatMessage(fullMessage);
+      }
+
       if (channel !== 'general' && (!channel || !channel.startsWith('dept_')) && receiver_id) {
         await createNotification(
           parseInt(receiver_id),
@@ -52,7 +60,7 @@ const ChatController = {
         );
       }
 
-      res.status(201).json({ id: msgId, status: 'sent', content: finalContent, attachment_url, attachment_name });
+      res.status(201).json({ id: msgId, status: 'sent', content: finalContent, attachment_url, attachment_name, message: fullMessage });
     } catch (err) {
       res.status(500).json({ error: 'Lỗi gửi tin nhắn: ' + err.message });
     }
@@ -81,6 +89,10 @@ const ChatController = {
       }
 
       await ChatRepository.delete(messageId);
+
+      // Broadcast real-time deletion
+      broadcastMessageDeleted(messageId, message.channel, message.receiver_id, message.sender_id);
+
       res.json({ message: 'Đã xóa tin nhắn thành công', id: messageId });
     } catch (err) {
       res.status(500).json({ error: 'Lỗi xóa tin nhắn: ' + err.message });
@@ -101,6 +113,10 @@ const ChatController = {
       }
 
       await ChatRepository.recall(messageId);
+
+      // Broadcast real-time recall
+      broadcastMessageRecalled(messageId, message.channel, message.receiver_id, message.sender_id);
+
       res.json({ message: 'Đã thu hồi tin nhắn thành công', id: messageId });
     } catch (err) {
       res.status(500).json({ error: 'Lỗi thu hồi tin nhắn: ' + err.message });
