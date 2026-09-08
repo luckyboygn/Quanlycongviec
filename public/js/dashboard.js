@@ -500,8 +500,8 @@ const Dashboard = {
     const cleanDeptName = rawDeptName.startsWith('Phòng') ? rawDeptName : ('Phòng ' + rawDeptName);
     const titleEl = document.getElementById('primary-chart-title');
     const subTitleEl = document.getElementById('primary-chart-subtitle');
-    if (titleEl) titleEl.innerHTML = `<i class="ph-bold ph-users text-[#005d39]"></i> Khối lượng công việc & Giờ công tự kê khai cán bộ: ${cleanDeptName}`;
-    if (subTitleEl) subTitleEl.innerText = `Theo dõi tiến độ việc giao & số giờ công thực tế từng nhân sự tự ghi nhận`;
+    if (titleEl) titleEl.innerHTML = `<i class="ph-bold ph-users text-[#005d39]"></i> Khối lượng công việc & Thời lượng tự kê khai cán bộ: ${cleanDeptName}`;
+    if (subTitleEl) subTitleEl.innerText = `Theo dõi tiến độ việc giao & thời lượng thực tế từng nhân sự tự ghi nhận`;
 
     const ctx = document.getElementById('primaryComparisonChart');
     if (!ctx) return;
@@ -929,8 +929,8 @@ const Dashboard = {
                         </td>
 
                         <td class="px-5 py-4 text-center whitespace-nowrap">
-                          <div class="font-extrabold text-sm text-slate-800 dark:text-white">${l.hours_spent}h</div>
-                          <div class="text-[10px] text-slate-400">${Math.round(l.hours_spent / 8 * 10) / 10} ngày công</div>
+                          <div class="font-extrabold text-sm text-slate-800 dark:text-white">${l.hours_spent} phút</div>
+                          <div class="text-[10px] text-slate-400">${Math.round((parseFloat(l.hours_spent || 0) / 60) * 10) / 10} giờ</div>
                         </td>
 
                         <td class="px-5 py-4 text-center whitespace-nowrap">
@@ -1019,8 +1019,8 @@ const Dashboard = {
 
               <div class="p-3 bg-slate-50 dark:bg-slate-700/30 rounded-xl border border-slate-200 dark:border-slate-700">
                 <span class="text-slate-400 block text-[10px] font-bold uppercase">Thời lượng ghi nhận</span>
-                <span class="font-extrabold text-slate-800 dark:text-white text-sm mt-1 block">${log.hours_spent} giờ</span>
-                <span class="text-[10px] text-slate-400 block">~${Math.round(log.hours_spent / 8 * 10) / 10} ngày công</span>
+                <span class="font-extrabold text-slate-800 dark:text-white text-sm mt-1 block">${log.hours_spent} phút</span>
+                <span class="text-[10px] text-slate-400 block">~${Math.round((parseFloat(log.hours_spent || 0) / 60) * 10) / 10} giờ</span>
               </div>
 
               <div class="p-3 bg-slate-50 dark:bg-slate-700/30 rounded-xl border border-slate-200 dark:border-slate-700">

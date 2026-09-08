@@ -48,7 +48,7 @@ const DiaryController = {
       });
 
       const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-      await logActivity(req.user.id, req.user.full_name, 'CREATE_PERSONAL_LOG', 'personal_work_logs', logId, `Kê khai nhật ký: "${title}" (${hours_spent || 8} giờ)`, clientIp);
+      await logActivity(req.user.id, req.user.full_name, 'CREATE_PERSONAL_LOG', 'personal_work_logs', logId, `Kê khai nhật ký: "${title}" (${hours_spent || 480} phút)`, clientIp);
 
       // Gửi thông báo đến Lãnh đạo phụ trách nếu được gắn
       if (supervisor_id && parseInt(supervisor_id) !== req.user.id) {
@@ -57,7 +57,7 @@ const DiaryController = {
           await NotificationRepository.create({
             user_id: parseInt(supervisor_id),
             title: 'Kê khai công việc mới gắn với Lãnh đạo',
-            content: `Cán bộ ${req.user.full_name} (${req.user.position || 'Cán bộ'}) đã kê khai công việc: "${title}" (${hours_spent || 8}h) gắn với bạn là Lãnh đạo phụ trách.`,
+            content: `Cán bộ ${req.user.full_name} (${req.user.position || 'Cán bộ'}) đã kê khai công việc: "${title}" (${hours_spent || 480} phút) gắn với bạn là Lãnh đạo phụ trách.`,
             type: 'info',
             related_id: logId
           });
@@ -197,7 +197,7 @@ const DiaryController = {
         await NotificationRepository.create({
           user_id: current.user_id,
           title: targetStatus === 'approved' ? 'Nhật ký công việc đã được duyệt' : 'Nhật ký công việc bị từ chối / cần sửa',
-          content: `${req.user.full_name} (${req.user.position || req.user.role}) đã ${statusLabel.toLowerCase()} bản kê khai "${current.title}" (${current.hours_spent}h).${comment ? ' Ghi chú: ' + comment : ''}`,
+          content: `${req.user.full_name} (${req.user.position || req.user.role}) đã ${statusLabel.toLowerCase()} bản kê khai "${current.title}" (${current.hours_spent} phút).${comment ? ' Ghi chú: ' + comment : ''}`,
           type: targetStatus === 'approved' ? 'success' : 'warning',
           related_id: logId
         });

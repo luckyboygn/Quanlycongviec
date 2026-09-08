@@ -365,6 +365,11 @@ async function initDB() {
       );
       console.log('✅ Verified auditor user: kiemtra / 123456');
     }
+
+    // 5. Convert any legacy hours in personal_work_logs (<= 24) to minutes (* 60)
+    try {
+      await db.runAsync(`UPDATE personal_work_logs SET hours_spent = hours_spent * 60 WHERE hours_spent <= 24 AND hours_spent > 0`);
+    } catch (e) {}
   } catch (seedErr) {
     console.error('Error checking/seeding database:', seedErr);
   }

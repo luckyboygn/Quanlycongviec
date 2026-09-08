@@ -767,8 +767,8 @@ const PersonalLogs = {
                 </td>
 
                 <td class="px-4 py-4 text-center whitespace-nowrap">
-                  <div class="font-extrabold text-sm text-slate-800 dark:text-white">${l.hours_spent}h</div>
-                  <div class="text-[10px] text-slate-400">${Math.round(l.hours_spent / 8 * 10) / 10} ngày công</div>
+                  <div class="font-extrabold text-sm text-slate-800 dark:text-white">${l.hours_spent} phút</div>
+                  <div class="text-[10px] text-slate-400">${Math.round((parseFloat(l.hours_spent || 0) / 60) * 10) / 10} giờ</div>
                 </td>
 
                 <td class="px-4 py-4 text-xs">
@@ -839,7 +839,7 @@ const PersonalLogs = {
     const [h2, m2] = endTime.split(':').map(Number);
     const diffMins = (h2 * 60 + m2) - (h1 * 60 + m1);
     if (diffMins <= 0) return null;
-    return Math.round((diffMins / 60) * 10) / 10;
+    return diffMins;
   },
 
   checkDateConflict(startDate, endDate, startTime = null, endTime = null, excludeId = null) {
@@ -1054,8 +1054,8 @@ const PersonalLogs = {
               </div>
 
               <div>
-                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Số giờ thực hiện (h)</label>
-                <input type="number" id="modal-log-hours" step="0.5" min="0.5" max="200" value="8" required class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold dark:text-white">
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Số phút thực hiện (phút) <span class="text-red-500">*</span></label>
+                <input type="number" id="modal-log-hours" step="1" min="1" max="100000" value="480" placeholder="VD: 60, 90, 480..." required class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold dark:text-white">
               </div>
 
               <div>
@@ -1248,8 +1248,8 @@ const PersonalLogs = {
               </div>
 
               <div>
-                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Số giờ (h)</label>
-                <input type="number" id="edit-log-hours" step="0.5" value="${log.hours_spent}" required class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold dark:text-white">
+                <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Số phút thực hiện (phút) <span class="text-red-500">*</span></label>
+                <input type="number" id="edit-log-hours" step="1" min="1" max="100000" value="${log.hours_spent}" required class="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs font-bold dark:text-white">
               </div>
 
               <div>
@@ -1435,7 +1435,8 @@ const PersonalLogs = {
           'Từ ngày': l.start_date,
           'Đến ngày': l.end_date,
           'Khung giờ': timeRange,
-          'Số giờ (h)': l.hours_spent,
+          'Thời lượng (phút)': l.hours_spent,
+          'Quy đổi (giờ)': Math.round((parseFloat(l.hours_spent || 0) / 60) * 10) / 10,
           'Trạng thái tiến độ': l.status === 'completed' ? 'Đã hoàn thành' : 'Đang thực hiện',
           'Trạng thái duyệt': approvalText,
           'Người duyệt': l.approved_by_name || '',
@@ -1459,7 +1460,8 @@ const PersonalLogs = {
         { wch: 14 }, // Từ ngày
         { wch: 14 }, // Đến ngày
         { wch: 16 }, // Khung giờ
-        { wch: 12 }, // Số giờ
+        { wch: 18 }, // Số phút
+        { wch: 14 }, // Quy đổi giờ
         { wch: 18 }, // Tiến độ
         { wch: 16 }, // Trạng thái duyệt
         { wch: 22 }, // Người duyệt

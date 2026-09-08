@@ -42,7 +42,8 @@ const Export = {
           'Từ ngày': l.start_date,
           'Đến ngày': l.end_date,
           'Khung giờ': timeRange,
-          'Số giờ (h)': l.hours_spent,
+          'Thời lượng (phút)': l.hours_spent,
+          'Quy đổi (giờ)': Math.round((parseFloat(l.hours_spent || 0) / 60) * 10) / 10,
           'Phân loại công việc': l.activity_type || 'Công tác chuyên môn',
           'Tên đầu việc / Nội dung': l.title,
           'Chi tiết thực hiện': l.description,
@@ -60,7 +61,8 @@ const Export = {
         { wch: 14 }, // Từ ngày
         { wch: 14 }, // Đến ngày
         { wch: 16 }, // Khung giờ
-        { wch: 12 }, // Số giờ
+        { wch: 18 }, // Số phút
+        { wch: 14 }, // Quy đổi giờ
         { wch: 22 }, // Phân loại
         { wch: 35 }, // Tên việc
         { wch: 45 }, // Chi tiết
