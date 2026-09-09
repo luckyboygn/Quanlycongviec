@@ -79,15 +79,20 @@ const TaskController = {
   async updateProgress(req, res) {
     try {
       const taskId = parseInt(req.params.id);
-      const { progress, status } = req.body;
+      const { progress, status, note, log_date } = req.body;
 
       const task = await TaskRepository.updateProgress(taskId, parseInt(progress), status);
       const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
       await logActivity(req.user.id, req.user.full_name, 'UPDATE_PROGRESS', 'tasks', taskId, `Cập nhật tiến độ ${progress}% (Trạng thái: ${task.status})`, clientIp);
 
+      if (note) {
+        const dateStr = log_date || new Date().toISOString().split('T')[0];
+        await TaskRepository.addLog(taskId, req.user.id, dateStr, parseInt(progress), note);
+      }
+
       res.json(task);
     } catch (err) {
-      res.status(500).json({ error: 'Lỗi cập nhật tiến độ' });
+      res.status(500).json({ error: 'Lỗi cập nhật tiến độ: ' + err.message });
     }
   },
 

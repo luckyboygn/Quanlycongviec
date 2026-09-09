@@ -962,14 +962,64 @@ const Tasks = {
     }
   },
 
+  formatDateDisplay(dateStr) {
+    if (!dateStr) return '--';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) {
+        const parts = String(dateStr).split('T')[0].split('-');
+        if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        return dateStr;
+      }
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch (e) {
+      return dateStr;
+    }
+  },
+
+  async completeTask(taskId, reopen = false) {
+    const actionText = reopen ? 'mở lại công việc này để tiếp tục thực hiện' : 'xác nhận hoàn thành 100% công việc này';
+    if (!confirm(`Bạn có chắc chắn muốn ${actionText}?`)) return;
+
+    try {
+      const newProgress = reopen ? 50 : 100;
+      const newStatus = reopen ? 'in_progress' : 'completed';
+      const note = reopen ? 'Đã mở lại công việc để tiếp tục thực hiện.' : 'Đã báo cáo & xác nhận hoàn thành công việc 100%.';
+
+      await apiFetch(`/api/tasks/${taskId}/progress`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          progress: newProgress,
+          status: newStatus,
+          note: note,
+          log_date: new Date().toISOString().split('T')[0]
+        })
+      });
+
+      if (window.showToast) {
+        showToast('success', reopen ? 'Đã mở lại công việc thành công!' : 'Đã hoàn thành công việc 100%! 🎉');
+      } else {
+        App.showToast(reopen ? 'Đã mở lại công việc thành công!' : 'Đã hoàn thành công việc 100%! 🎉', 'success');
+      }
+
+      App.closeModal();
+      this.loadTasks();
+    } catch (err) {
+      alert('Lỗi cập nhật trạng thái: ' + err.message);
+    }
+  },
+
   openProgressModal(taskId, currentProgress) {
     const modalContainer = document.getElementById('modal-container');
     const today = new Date().toISOString().split('T')[0];
 
     modalContainer.innerHTML = `
       <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-700">
-          <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-800/80">
             <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
               <i class="ph-bold ph-gauge text-emerald-600"></i> Cập nhật tiến độ & Nhật ký
             </h3>
@@ -982,24 +1032,36 @@ const Tasks = {
             <div>
               <div class="flex justify-between items-center mb-2">
                 <label class="text-xs font-bold uppercase text-slate-500">Mức độ hoàn thành</label>
-                <span id="progress-val-display" class="text-lg font-extrabold text-emerald-600">${currentProgress}%</span>
+                <span id="progress-val-display" class="text-lg font-black text-emerald-600">${currentProgress}%</span>
               </div>
               <input type="range" id="progress-slider" min="0" max="100" step="5" value="${currentProgress}" oninput="document.getElementById('progress-val-display').innerText = this.value + '%'" class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+              
+              <!-- Quick Progress Chips -->
+              <div class="flex items-center justify-between gap-1.5 mt-2.5">
+                <button type="button" onclick="document.getElementById('progress-slider').value=25; document.getElementById('progress-val-display').innerText='25%'" class="px-2 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-[11px] font-bold rounded-lg transition">25%</button>
+                <button type="button" onclick="document.getElementById('progress-slider').value=50; document.getElementById('progress-val-display').innerText='50%'" class="px-2 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-[11px] font-bold rounded-lg transition">50%</button>
+                <button type="button" onclick="document.getElementById('progress-slider').value=75; document.getElementById('progress-val-display').innerText='75%'" class="px-2 py-1 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 text-[11px] font-bold rounded-lg transition">75%</button>
+                <button type="button" onclick="document.getElementById('progress-slider').value=100; document.getElementById('progress-val-display').innerText='100%'" class="px-2.5 py-1 bg-emerald-100 dark:bg-emerald-900/60 hover:bg-emerald-200 text-emerald-800 dark:text-emerald-300 text-[11px] font-extrabold rounded-lg transition flex items-center gap-1 border border-emerald-300">
+                  <i class="ph-bold ph-check"></i> 100% Xong
+                </button>
+              </div>
             </div>
 
             <div>
               <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Ngày ghi nhận</label>
-              <input type="date" id="log-date" value="${today}" class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm dark:text-white">
+              <input type="date" id="log-date" value="${today}" class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm dark:text-white font-medium">
             </div>
 
             <div>
-              <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Ghi chú công việc đã làm trong ngày</label>
-              <textarea id="log-note" rows="3" placeholder="Hôm nay đã xử lý các phần việc gì, kết quả ra sao..." class="w-full px-4 py-2 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm dark:text-white"></textarea>
+              <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Ghi chú công việc đã làm / Kết quả đạt được</label>
+              <textarea id="log-note" rows="3" placeholder="Nêu rõ nội dung đã xử lý, tài liệu đính kèm hoặc kết quả công việc..." class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm dark:text-white"></textarea>
             </div>
 
-            <div class="pt-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-end gap-3">
+            <div class="pt-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-end gap-2.5">
               <button type="button" onclick="App.closeModal()" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-xs">Hủy</button>
-              <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs shadow-sm transition">Lưu Tiến Độ</button>
+              <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-sm transition flex items-center gap-1.5">
+                <i class="ph-bold ph-floppy-disk text-base"></i> Lưu Tiến Độ
+              </button>
             </div>
           </form>
         </div>
@@ -1012,14 +1074,20 @@ const Tasks = {
     const progress = parseInt(document.getElementById('progress-slider').value);
     const log_date = document.getElementById('log-date').value;
     const note = document.getElementById('log-note').value;
+    const status = progress === 100 ? 'completed' : (progress > 0 ? 'in_progress' : 'pending');
 
     try {
       await apiFetch(`/api/tasks/${taskId}/progress`, {
         method: 'PUT',
-        body: JSON.stringify({ progress, log_date, note })
+        body: JSON.stringify({ progress, status, log_date, note })
       });
 
-      App.showToast('Cập nhật tiến độ thành công!', 'success');
+      if (window.showToast) {
+        showToast('success', progress === 100 ? 'Đã hoàn thành công việc 100%! 🎉' : 'Cập nhật tiến độ thành công!');
+      } else {
+        App.showToast('Cập nhật tiến độ thành công!', 'success');
+      }
+
       App.closeModal();
       this.loadTasks();
     } catch (err) {
@@ -1032,44 +1100,76 @@ const Tasks = {
       const task = await apiFetch(`/api/tasks/${taskId}`);
       const modalContainer = document.getElementById('modal-container');
 
+      const isCreator = (task.created_by == Auth.user.id);
+      const isAssignee = task.assignees && task.assignees.some(a => a.id == Auth.user.id);
+      const canManage = isCreator || isAssignee || Auth.isManager() || Auth.isDirector() || Auth.isAdmin();
+
+      const priorityLabels = {
+        urgent: '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">🔴 Khẩn cấp</span>',
+        high: '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300">🟠 Cao</span>',
+        medium: '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">🔵 Trung bình</span>',
+        low: '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">🟢 Thấp</span>'
+      };
+
+      const statusLabels = {
+        completed: '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">✅ Hoàn thành</span>',
+        in_progress: '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">⏳ Đang thực hiện</span>',
+        pending: '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">⏸️ Chưa bắt đầu</span>',
+        overdue: '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">⚠️ Quá hạn</span>'
+      };
+
       modalContainer.innerHTML = `
         <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-700">
+          <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col">
+            
+            <!-- Top Header -->
             <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-800 z-10">
               <div>
                 <span class="text-xs font-mono font-bold text-emerald-600">${task.department_name}</span>
                 <h3 class="text-xl font-bold text-slate-800 dark:text-white mt-0.5">${task.title}</h3>
+                ${task.creator_name ? `<p class="text-[11px] text-slate-400 mt-0.5">Người giao việc: <b>${task.creator_name}</b></p>` : ''}
               </div>
               <button onclick="App.closeModal()" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700">
                 <i class="ph-bold ph-x text-lg"></i>
               </button>
             </div>
 
-            <div class="p-6 space-y-6">
+            <div class="p-6 space-y-6 flex-1">
               <!-- Meta Row -->
               <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-700">
                   <div class="text-[10px] text-slate-400 font-bold uppercase">Mức ưu tiên</div>
-                  <div class="font-bold text-xs mt-1 priority-${task.priority} inline-block px-2 py-0.5 rounded-full uppercase">${task.priority}</div>
+                  <div class="mt-1">${priorityLabels[task.priority] || task.priority}</div>
                 </div>
-                <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-700">
                   <div class="text-[10px] text-slate-400 font-bold uppercase">Trạng thái</div>
-                  <div class="font-bold text-xs mt-1 text-emerald-600 dark:text-emerald-400 uppercase">${task.status}</div>
+                  <div class="mt-1">${statusLabels[task.status] || task.status}</div>
                 </div>
-                <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-700">
                   <div class="text-[10px] text-slate-400 font-bold uppercase">Ngày bắt đầu</div>
-                  <div class="font-bold text-xs mt-1 font-mono">${task.start_date}</div>
+                  <div class="font-bold text-xs mt-1 font-mono text-slate-800 dark:text-slate-200">${this.formatDateDisplay(task.start_date)}</div>
                 </div>
-                <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-700">
                   <div class="text-[10px] text-slate-400 font-bold uppercase">Hạn chót</div>
-                  <div class="font-bold text-xs mt-1 font-mono text-rose-500">${task.due_date}</div>
+                  <div class="font-bold text-xs mt-1 font-mono ${task.status === 'overdue' ? 'text-rose-500' : 'text-slate-800 dark:text-slate-200'}">${this.formatDateDisplay(task.due_date)}</div>
+                </div>
+              </div>
+
+              <!-- Progress Bar Section -->
+              <div class="p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-slate-800 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 space-y-2">
+                <div class="flex items-center justify-between text-xs font-bold">
+                  <span class="text-slate-700 dark:text-slate-300">Tiến độ thực hiện hiện tại:</span>
+                  <span class="text-emerald-700 dark:text-emerald-400 font-black text-sm">${task.progress || 0}%</span>
+                </div>
+                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2.5 overflow-hidden shadow-inner">
+                  <div class="bg-gradient-to-r from-emerald-500 to-teal-500 h-full rounded-full transition-all duration-300" style="width: ${task.progress || 0}%"></div>
                 </div>
               </div>
 
               <!-- Description -->
               <div>
                 <h4 class="text-xs font-bold uppercase text-slate-400 mb-1">Mô tả yêu cầu</h4>
-                <p class="text-sm text-slate-700 dark:text-slate-300 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-xl whitespace-pre-line">
+                <p class="text-sm text-slate-700 dark:text-slate-300 p-4 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-700 whitespace-pre-line leading-relaxed">
                   ${task.description || 'Không có mô tả chi tiết.'}
                 </p>
               </div>
@@ -1079,9 +1179,9 @@ const Tasks = {
                 <h4 class="text-xs font-bold uppercase text-slate-400 mb-2">Nhân sự thực hiện (${task.assignees ? task.assignees.length : 0})</h4>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   ${(task.assignees || []).map(a => `
-                    <div class="p-2.5 bg-slate-50 dark:bg-slate-700/50 rounded-xl flex items-center justify-between">
-                      <div class="flex items-center gap-2">
-                        <div class="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900 text-emerald-700 font-bold text-xs flex items-center justify-center">
+                    <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                      <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-900 text-emerald-700 font-bold text-xs flex items-center justify-center shadow-2xs">
                           ${a.full_name.split(' ').pop()[0]}
                         </div>
                         <div>
@@ -1089,7 +1189,7 @@ const Tasks = {
                           <div class="text-[10px] text-slate-400">${a.position || a.role}</div>
                         </div>
                       </div>
-                      ${a.is_leader ? '<span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">Phụ trách chính</span>' : '<span class="text-[10px] text-slate-400">Phối hợp</span>'}
+                      ${a.is_leader ? '<span class="text-[10px] font-bold text-amber-700 bg-amber-100 dark:bg-amber-950 dark:text-amber-300 px-2 py-0.5 rounded-md">Phụ trách chính</span>' : '<span class="text-[10px] text-slate-400 font-medium">Phối hợp</span>'}
                     </div>
                   `).join('')}
                 </div>
@@ -1099,18 +1199,20 @@ const Tasks = {
               <div>
                 <div class="flex items-center justify-between mb-2">
                   <h4 class="text-xs font-bold uppercase text-slate-400">Nhật ký cập nhật tiến độ (${task.logs ? task.logs.length : 0})</h4>
-                  <button onclick="Tasks.openProgressModal(${task.id}, ${task.progress})" class="text-xs text-emerald-600 hover:underline font-bold flex items-center gap-1">
-                    <i class="ph-bold ph-plus"></i> Ghi nhận tiến độ mới
-                  </button>
+                  ${canManage ? `
+                    <button onclick="Tasks.openProgressModal(${task.id}, ${task.progress})" class="text-xs text-emerald-600 hover:text-emerald-700 font-bold flex items-center gap-1 transition">
+                      <i class="ph-bold ph-plus"></i> Ghi nhận tiến độ mới
+                    </button>
+                  ` : ''}
                 </div>
                 <div class="space-y-2 max-h-48 overflow-y-auto">
                   ${(task.logs || []).length === 0 ? `
-                    <div class="text-xs text-slate-400 italic p-3 bg-slate-50 dark:bg-slate-700/30 rounded-xl">Chưa có nhật ký ghi nhận.</div>
+                    <div class="text-xs text-slate-400 italic p-3.5 bg-slate-50 dark:bg-slate-700/30 rounded-2xl border border-slate-200 dark:border-slate-700">Chưa có nhật ký ghi nhận.</div>
                   ` : (task.logs || []).map(l => `
-                    <div class="p-3 bg-slate-50 dark:bg-slate-700/40 rounded-xl text-xs space-y-1">
+                    <div class="p-3 bg-slate-50 dark:bg-slate-700/40 rounded-2xl border border-slate-200 dark:border-slate-700 text-xs space-y-1">
                       <div class="flex items-center justify-between text-slate-400">
                         <span class="font-bold text-slate-700 dark:text-slate-200">${l.user_name}</span>
-                        <span class="font-mono text-[10px]">${l.log_date} (${l.progress_percent}%)</span>
+                        <span class="font-mono text-[10px]">${this.formatDateDisplay(l.log_date)} (${l.progress_percent}%)</span>
                       </div>
                       <p class="text-slate-600 dark:text-slate-300">${l.note}</p>
                     </div>
@@ -1119,9 +1221,43 @@ const Tasks = {
               </div>
             </div>
 
-            <div class="p-6 border-t border-slate-200 dark:border-slate-700 flex justify-end">
-              <button onclick="App.closeModal()" class="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 font-semibold rounded-xl text-xs">Đóng</button>
+            <!-- Modal Action Footer -->
+            <div class="p-5 border-t border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 bg-slate-50/70 dark:bg-slate-800/80 shrink-0">
+              <div>
+                ${task.status === 'completed' ? `
+                  <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold text-xs border border-emerald-300 dark:border-emerald-800">
+                    <i class="ph-bold ph-check-circle text-base"></i> Đã hoàn thành 100%
+                  </span>
+                ` : `
+                  <span class="text-xs text-slate-500">
+                    Trạng thái: <b class="text-slate-800 dark:text-white uppercase">${task.status}</b>
+                  </span>
+                `}
+              </div>
+
+              <div class="flex flex-wrap items-center gap-2.5">
+                <button onclick="App.closeModal()" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition">
+                  Đóng
+                </button>
+                
+                ${canManage ? `
+                  <button onclick="Tasks.openProgressModal(${task.id}, ${task.progress})" class="px-3.5 py-2 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-bold rounded-xl text-xs border border-blue-200 dark:border-blue-800 transition flex items-center gap-1.5">
+                    <i class="ph-bold ph-gauge text-base"></i> Ghi tiến độ
+                  </button>
+                  
+                  ${task.status === 'completed' ? `
+                    <button onclick="Tasks.completeTask(${task.id}, true)" class="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs shadow-sm transition flex items-center gap-1.5">
+                      <i class="ph-bold ph-arrow-counter-clockwise text-base"></i> Mở lại công việc
+                    </button>
+                  ` : `
+                    <button onclick="Tasks.completeTask(${task.id}, false)" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md shadow-emerald-600/20 transition flex items-center gap-1.5">
+                      <i class="ph-bold ph-check-circle text-base"></i> Báo cáo Hoàn Thành (100%)
+                    </button>
+                  `}
+                ` : ''}
+              </div>
             </div>
+
           </div>
         </div>
       `;
