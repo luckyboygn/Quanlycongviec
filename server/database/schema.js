@@ -268,6 +268,61 @@ async function initDB() {
 
   await safeAddColumn('news', 'news_date', 'TEXT');
 
+  // 12. Evaluations table (Phiếu đánh giá mức độ hoàn thành công việc Mẫu 01A)
+  await execTable(`
+    CREATE TABLE IF NOT EXISTS evaluations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      month INTEGER NOT NULL,
+      year INTEGER NOT NULL,
+      period_name TEXT,
+      score_volume REAL DEFAULT 0,
+      score_quality REAL DEFAULT 0,
+      score_progress REAL DEFAULT 0,
+      score_attitude REAL DEFAULT 0,
+      score_discipline REAL DEFAULT 0,
+      score_test REAL DEFAULT 0,
+      score_total REAL DEFAULT 0,
+      mgr_score_volume REAL,
+      mgr_score_quality REAL,
+      mgr_score_progress REAL,
+      mgr_score_attitude REAL,
+      mgr_score_discipline REAL,
+      mgr_score_test REAL,
+      mgr_score_total REAL,
+      deputy_score_total REAL,
+      head_score_total REAL,
+      avg_score_total REAL,
+      notes TEXT,
+      status TEXT DEFAULT 'draft',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id, month, year)
+    )
+  `);
+
+  try {
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_evaluations_user_period ON evaluations(user_id, month, year)`);
+  } catch (e) {}
+
+  await safeAddColumn('evaluations', 'deputy_score_volume', 'REAL');
+  await safeAddColumn('evaluations', 'deputy_score_quality', 'REAL');
+  await safeAddColumn('evaluations', 'deputy_score_progress', 'REAL');
+  await safeAddColumn('evaluations', 'deputy_score_attitude', 'REAL');
+  await safeAddColumn('evaluations', 'deputy_score_discipline', 'REAL');
+  await safeAddColumn('evaluations', 'deputy_score_test', 'REAL');
+
+  await safeAddColumn('evaluations', 'head_score_volume', 'REAL');
+  await safeAddColumn('evaluations', 'head_score_quality', 'REAL');
+  await safeAddColumn('evaluations', 'head_score_progress', 'REAL');
+  await safeAddColumn('evaluations', 'head_score_attitude', 'REAL');
+  await safeAddColumn('evaluations', 'head_score_discipline', 'REAL');
+  await safeAddColumn('evaluations', 'head_score_test', 'REAL');
+
+  await safeAddColumn('evaluations', 'mgr_notes', 'TEXT');
+  await safeAddColumn('evaluations', 'deputy_notes', 'TEXT');
+  await safeAddColumn('evaluations', 'head_notes', 'TEXT');
+
   // AUTO SEED IF EMPTY
   try {
     const userCount = await db.getAsync('SELECT COUNT(*) as count FROM users');

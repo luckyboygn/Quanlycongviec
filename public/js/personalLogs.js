@@ -106,33 +106,55 @@ const PersonalLogs = {
     container.innerHTML = `
       <div class="space-y-6">
         <!-- Header -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-          <div>
-            <h1 class="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
-              <span class="p-2 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-xl">
+        <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+          <!-- Top Row: Title + Primary Action Buttons -->
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="flex items-start gap-3.5">
+              <span class="p-2.5 bg-emerald-50 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-2xl flex-shrink-0 mt-0.5 shadow-xs">
                 <i class="ph-bold ph-calendar-check text-2xl"></i>
               </span>
-              Bản Kê Khai Nhật Ký Công Việc Cá Nhân
-            </h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Ghi nhận chi tiết thời gian, nội dung, địa điểm, kết quả và lãnh đạo phụ trách phục vụ theo dõi, xác nhận giờ công và đánh giá KPI.
-            </p>
-          </div>
-          <div class="flex flex-wrap items-center gap-3">
-            <button onclick="PersonalLogs.checkMissingDays()" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white text-sm font-bold rounded-xl flex items-center gap-2 shadow-sm transition">
-              <i class="ph-bold ph-calendar-x text-base"></i> 🔍 Rà soát ngày thiếu trong tháng
-            </button>
-            ${(Auth.isManager() || Auth.isDirector() || Auth.isAdmin()) ? `
-              <button onclick="PersonalLogs.batchApprovePending()" class="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-sm font-bold rounded-xl flex items-center gap-2 shadow-sm transition">
-                <i class="ph-bold ph-checks text-base"></i> ⚡ Duyệt nhanh tất cả việc chờ duyệt
+              <div>
+                <h1 class="text-xl sm:text-2xl font-bold text-slate-800 dark:text-white tracking-tight">
+                  Bản Kê Khai Nhật Ký Công Việc Cá Nhân
+                </h1>
+                <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  Ghi nhận chi tiết thời gian, nội dung, địa điểm, kết quả và lãnh đạo phụ trách phục vụ theo dõi, xác nhận giờ công và đánh giá KPI.
+                </p>
+              </div>
+            </div>
+            
+            <!-- Primary Action Buttons (Right) -->
+            <div class="flex flex-wrap items-center gap-2.5 flex-shrink-0">
+              <button onclick="PersonalLogs.exportToExcel()" class="px-3.5 py-2 bg-slate-100 dark:bg-slate-700/80 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-semibold rounded-xl flex items-center gap-2 border border-slate-200 dark:border-slate-600 transition shadow-xs">
+                <i class="ph-bold ph-file-xls text-emerald-600 text-base"></i> Xuất Excel
               </button>
+              <button onclick="PersonalLogs.openCreateModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold rounded-xl flex items-center gap-2 shadow-sm shadow-emerald-600/20 transition">
+                <i class="ph-bold ph-plus-circle text-base"></i> Kê khai công việc mới
+              </button>
+            </div>
+          </div>
+
+          <!-- Bottom Row: Utility / Feature Quick Buttons -->
+          <div class="flex flex-wrap items-center justify-between gap-3 pt-3.5 border-t border-slate-100 dark:border-slate-700/60">
+            <div class="flex flex-wrap items-center gap-2.5 text-xs">
+              <span class="text-slate-400 font-bold text-[11px] uppercase tracking-wider flex items-center gap-1 mr-1">
+                <i class="ph-bold ph-squares-four text-slate-400"></i> Tiện ích:
+              </span>
+              <button onclick="PersonalLogs.openSelfEvaluationModal()" class="px-3.5 py-1.5 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-bold rounded-xl border border-blue-200 dark:border-blue-800 flex items-center gap-1.5 transition shadow-xs">
+                <i class="ph-bold ph-star text-amber-500 text-sm"></i> Tự chấm điểm (Mẫu 01A)
+              </button>
+              <button onclick="PersonalLogs.checkMissingDays()" class="px-3.5 py-1.5 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-800 dark:text-amber-300 font-bold rounded-xl border border-amber-200 dark:border-amber-800 flex items-center gap-1.5 transition shadow-xs">
+                <i class="ph-bold ph-calendar-magnifying-glass text-amber-600 text-sm"></i> Rà soát ngày thiếu
+              </button>
+            </div>
+
+            ${(Auth.isManager() || Auth.isDirector() || Auth.isAdmin()) ? `
+              <div class="flex items-center gap-2">
+                <button onclick="PersonalLogs.batchApprovePending()" class="px-3.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 font-bold rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5 transition shadow-xs">
+                  <i class="ph-bold ph-checks text-emerald-600 text-sm"></i> Duyệt nhanh việc chờ duyệt
+                </button>
+              </div>
             ` : ''}
-            <button onclick="PersonalLogs.exportToExcel()" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-sm font-semibold rounded-xl flex items-center gap-2 transition">
-              <i class="ph-bold ph-file-xls text-emerald-600 text-base"></i> Xuất Bản Kê Khai
-            </button>
-            <button onclick="PersonalLogs.openCreateModal()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl flex items-center gap-2 shadow-sm transition">
-              <i class="ph-bold ph-plus text-base"></i> Kê khai công việc mới
-            </button>
           </div>
         </div>
 
@@ -1901,5 +1923,1226 @@ const PersonalLogs = {
       console.error(err);
       alert('Lỗi rà soát ngày chưa kê khai: ' + err.message);
     }
+  },
+
+  /**
+   * PHIẾU ĐÁNH GIÁ MỨC ĐỘ HOÀN THÀNH CÔNG VIỆC (MẪU 01A)
+   */
+  evalTargetUserId: null,
+  evalMonth: null,
+  evalYear: null,
+
+  formatUserPosition(position, role) {
+    if (position && position.trim() && !['staff', 'manager', 'director', 'admin', 'auditor'].includes(position.trim().toLowerCase())) {
+      return position.trim();
+    }
+    const map = {
+      'admin': 'Quản trị hệ thống',
+      'director': 'Ban Giám đốc',
+      'manager': 'Lãnh đạo phòng',
+      'staff': 'Nhân viên',
+      'auditor': 'Kiểm tra & Giám sát'
+    };
+    return map[role] || position || 'Cán bộ';
+  },
+
+  getUserEvaluationColumn(user) {
+    if (!user) return 'staff';
+    const role = user.role || '';
+    const pos = (user.position || '').toLowerCase();
+
+    if (pos.includes('phó giám đốc') || pos.includes('phó trưởng đơn vị') || pos.includes('phó thủ trưởng')) {
+      return 'deputy'; // Cột 3
+    }
+    if (role === 'director' || role === 'admin' || pos.includes('giám đốc') || pos.includes('trưởng đơn vị') || pos.includes('thủ trưởng')) {
+      return 'head'; // Cột 4
+    }
+    if (role === 'manager' || pos.includes('phó phòng') || pos.includes('trưởng phòng') || pos.includes('lãnh đạo')) {
+      return 'manager'; // Cột 2
+    }
+    return 'staff'; // Cột 1
+  },
+
+  validateAndClamp(input, max) {
+    if (!input) return;
+    let val = parseFloat(input.value);
+    if (isNaN(val)) {
+      input.value = '';
+    } else if (val > max) {
+      input.value = max;
+      input.classList.add('ring-2', 'ring-rose-500');
+      setTimeout(() => input.classList.remove('ring-2', 'ring-rose-500'), 800);
+    } else if (val < 0) {
+      input.value = 0;
+    }
+    this.recalcEvalScores();
+  },
+
+  async openSelfEvaluationModal(selectedMonth = null, selectedYear = null, selectedUserId = null) {
+    const modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) return;
+
+    const now = new Date();
+    const month = selectedMonth ? parseInt(selectedMonth) : (this.evalMonth || (now.getMonth() + 1));
+    const year = selectedYear ? parseInt(selectedYear) : (this.evalYear || now.getFullYear());
+    
+    // Target user to evaluate: default current target or logged-in user
+    let targetUserId = selectedUserId ? parseInt(selectedUserId) : (this.evalTargetUserId || (this.targetUserId !== 'all' && typeof this.targetUserId === 'number' ? this.targetUserId : Auth.user.id));
+    if (isNaN(targetUserId) || targetUserId <= 0) {
+      targetUserId = Auth.user.id;
+    }
+
+    this.evalTargetUserId = targetUserId;
+    this.evalMonth = month;
+    this.evalYear = year;
+
+    const isSelf = (targetUserId == Auth.user.id);
+    
+    // Phân quyền chấm điểm trực tiếp theo vị trí chức vụ của người dùng đang thao tác:
+    const userCol = this.getUserEvaluationColumn(Auth.user);
+    const canEditSelfCol = (userCol === 'staff');      // Nhân viên / Chuyên viên -> Cột 1
+    const canEditMgrCol = (userCol === 'manager');     // Lãnh đạo phòng (Phó phòng, Trưởng phòng) -> Cột 2
+    const canEditDeputyCol = (userCol === 'deputy');   // Phó trưởng đơn vị (Phó Giám đốc) -> Cột 3
+    const canEditHeadCol = (userCol === 'head');       // Trưởng đơn vị (Giám đốc, Admin) -> Cột 4
+
+    const isStaff = Auth.isStaff();
+    const isManager = Auth.isManager();
+    const isDirector = Auth.isDirector();
+    const isAdmin = Auth.isAdmin();
+
+    // Member options for Manager / Director / Admin
+    let memberSelectHtml = '';
+    if (isManager || isDirector || isAdmin) {
+      const users = this.cachedMembers || [];
+      let availableMembers = [];
+      if (isManager) {
+        availableMembers = users.filter(u => u.department_id == Auth.user.department_id && (u.status === 'active' || !u.status));
+      } else {
+        availableMembers = users.filter(u => u.status === 'active' || !u.status);
+      }
+
+      memberSelectHtml = `
+        <div class="flex items-center gap-1.5 bg-white dark:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs">
+          <span class="text-xs text-slate-500 font-semibold shrink-0">Cán bộ được đánh giá:</span>
+          <select id="modal-eval-user-select" onchange="PersonalLogs.openSelfEvaluationModal(${month}, ${year}, this.value)" class="bg-transparent text-xs font-extrabold text-emerald-700 dark:text-emerald-400 focus:outline-none cursor-pointer max-w-[200px] truncate">
+            ${availableMembers.map(u => `
+              <option value="${u.id}" ${u.id == targetUserId ? 'selected' : ''}>👤 ${u.full_name} (${this.formatUserPosition(u.position, u.role)})</option>
+            `).join('')}
+          </select>
+        </div>
+      `;
+    }
+
+    modalContainer.innerHTML = `
+      <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-5xl w-full max-h-[95vh] overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col animate-in fade-in zoom-in-95 duration-200">
+          
+          <!-- Top Modal Action Bar -->
+          <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/90 shrink-0">
+            <div class="flex items-center gap-2.5">
+              <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center text-xl shadow-md shadow-blue-500/20">
+                <i class="ph-bold ph-star"></i>
+              </div>
+              <div>
+                <h3 class="text-base font-extrabold text-slate-800 dark:text-white flex items-center gap-2">
+                  Phiếu Đánh Giá Mức Độ Hoàn Thành Công Việc
+                  <span class="text-[11px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">MẪU 01A</span>
+                </h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                  ${isSelf ? 'Cá nhân tự chấm điểm kết quả công tác trong kỳ' : 'Lãnh đạo thẩm định & chấm điểm cho cán bộ'}
+                </p>
+              </div>
+            </div>
+
+            <!-- Member & Month Selector & Actions -->
+            <div class="flex flex-wrap items-center gap-2">
+              ${memberSelectHtml}
+              <div class="flex items-center gap-1.5 bg-white dark:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-600 shadow-xs">
+                <span class="text-xs text-slate-500 font-semibold">Kỳ đánh giá:</span>
+                <select id="modal-eval-month-select" onchange="PersonalLogs.openSelfEvaluationModal(this.value, ${year}, ${targetUserId})" class="bg-transparent text-xs font-extrabold text-blue-600 dark:text-blue-400 focus:outline-none cursor-pointer">
+                  ${Array.from({length: 12}, (_, i) => i + 1).map(m => `
+                    <option value="${m}" ${m === month ? 'selected' : ''}>Tháng ${m}/${year}</option>
+                  `).join('')}
+                </select>
+              </div>
+              <button onclick="PersonalLogs.printSelfEvaluation()" class="px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 text-xs font-bold rounded-xl flex items-center gap-1.5 transition">
+                <i class="ph-bold ph-printer text-sm text-emerald-600"></i> <span class="hidden sm:inline">In Phiếu</span>
+              </button>
+              <button onclick="App.closeModal()" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                <i class="ph-bold ph-x text-lg"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Loading Spinner -->
+          <div id="eval-modal-loading" class="py-20 text-center text-slate-400">
+            <i class="ph ph-spinner animate-spin text-4xl text-blue-600 mb-3"></i>
+            <p class="text-sm font-semibold">Đang tải dữ liệu biểu mẫu MẪU 01A...</p>
+          </div>
+
+          <!-- Printable Document Container -->
+          <div id="eval-modal-content" class="hidden flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100/60 dark:bg-slate-900/60 custom-scrollbar">
+            <!-- Document Paper Sheet -->
+            <div id="printable-eval-form" class="bg-white text-slate-900 p-6 sm:p-10 rounded-2xl shadow-lg max-w-4xl mx-auto border border-slate-200 font-sans text-xs sm:text-sm leading-normal">
+              
+              <!-- Form Top Bar -->
+              <div class="flex justify-end mb-2">
+                <div class="border border-slate-800 px-3 py-1 text-[11px] font-bold tracking-wider uppercase text-slate-800">
+                  MẪU 01A (Lưu tại đơn vị)
+                </div>
+              </div>
+
+              <!-- Header Left & Right -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-4 border-b border-slate-200">
+                <div class="text-center font-bold uppercase text-[12px] leading-tight text-slate-800">
+                  <div>NGÂN HÀNG NÔNG NGHIỆP</div>
+                  <div>VÀ PHÁT TRIỂN NÔNG THÔN VIỆT NAM</div>
+                  <div id="eval-header-dept" class="mt-1 text-emerald-800 font-extrabold underline tracking-wide">
+                    PHÒNG QUẢN LÝ ĐÀO TẠO VÀ THƯ VIỆN
+                  </div>
+                </div>
+                <div class="text-center text-[12px] leading-tight text-slate-800">
+                  <div class="font-bold uppercase">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                  <div class="font-bold">Độc lập – Tự do – Hạnh phúc</div>
+                  <div class="w-28 h-0.5 bg-slate-800 mx-auto my-1.5"></div>
+                  <div class="italic text-[11px] text-slate-600">
+                    Hà Nội, ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}
+                  </div>
+                </div>
+              </div>
+
+              <!-- Document Title -->
+              <div class="text-center my-6">
+                <h2 class="text-base sm:text-lg font-black uppercase tracking-wide text-slate-900">
+                  PHIẾU ĐÁNH GIÁ MỨC ĐỘ HOÀN THÀNH CÔNG VIỆC
+                </h2>
+                <div id="eval-title-period" class="font-bold text-xs sm:text-sm text-slate-700 mt-1.5 flex items-center justify-center gap-1.5 flex-wrap">
+                  <span>Kỳ tạm ứng thù lao theo hiệu quả công việc V2 tháng</span>
+                  <select id="eval-title-month-select" onchange="PersonalLogs.openSelfEvaluationModal(this.value, ${year}, ${targetUserId})" class="px-2 py-0.5 bg-blue-50 dark:bg-slate-700 border border-blue-300 dark:border-blue-600 rounded-lg font-black text-blue-700 dark:text-blue-300 cursor-pointer focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm">
+                    ${Array.from({length: 12}, (_, i) => i + 1).map(m => `
+                      <option value="${m}" ${m === month ? 'selected' : ''}>${m}</option>
+                    `).join('')}
+                  </select>
+                  <span>năm ${year}</span>
+                </div>
+                <div class="italic text-xs text-slate-500 mt-1" id="eval-title-subtitle">
+                  ${canEditMgrCol ? '(Áp dụng cho Lãnh đạo phòng/nghiệp vụ)' : canEditDeputyCol ? '(Áp dụng cho Phó trưởng đơn vị)' : canEditHeadCol ? '(Áp dụng cho Trưởng đơn vị)' : '(Áp dụng cho nhân viên)'}
+                </div>
+              </div>
+
+              <!-- Personnel Information -->
+              <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6 space-y-1.5 text-xs sm:text-sm">
+                <div class="flex flex-wrap gap-2">
+                  <span class="font-bold text-slate-700 min-w-[120px]">Họ và tên:</span>
+                  <span id="eval-info-name" class="font-bold text-blue-900 text-sm">--</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <span class="font-bold text-slate-700 min-w-[120px]">Chức vụ:</span>
+                  <span id="eval-info-position" class="font-medium text-slate-800">--</span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                  <span class="font-bold text-slate-700 min-w-[120px]">Phòng/Bộ phận:</span>
+                  <span id="eval-info-dept" class="font-medium text-slate-800">--</span>
+                </div>
+              </div>
+
+              <!-- Evaluation Form Table -->
+              <div class="overflow-x-auto">
+                <table class="w-full border-collapse border border-slate-400 text-xs leading-relaxed text-slate-800">
+                  <thead>
+                    <tr class="bg-slate-100 text-center font-bold">
+                      <th rowspan="2" class="border border-slate-400 p-2 w-10">TT</th>
+                      <th rowspan="2" class="border border-slate-400 p-2 text-left min-w-[200px]">Tiêu chí đánh giá</th>
+                      <th colspan="5" class="border border-slate-400 p-1.5 bg-blue-50/60 text-blue-950">Điểm đánh giá</th>
+                      <th rowspan="2" class="border border-slate-400 p-2 w-28">Ghi chú</th>
+                    </tr>
+                    <tr class="bg-slate-100 text-center font-bold text-[11px]">
+                      <th class="border border-slate-400 p-1.5 w-24 ${canEditSelfCol ? 'bg-blue-100/70 text-blue-900' : 'text-slate-600'}">
+                        NLĐ (Tự đánh giá)
+                      </th>
+                      <th class="border border-slate-400 p-1.5 w-24 ${canEditMgrCol ? 'bg-amber-100/70 text-amber-900' : 'text-slate-600'}">
+                        LĐ phòng / nghiệp vụ
+                      </th>
+                      <th class="border border-slate-400 p-1.5 w-22 ${canEditDeputyCol ? 'bg-purple-100/70 text-purple-900' : 'text-slate-600'}">
+                        Phó trưởng đơn vị
+                      </th>
+                      <th class="border border-slate-400 p-1.5 w-22 ${canEditHeadCol ? 'bg-emerald-100/70 text-emerald-900' : 'text-slate-600'}">
+                        Trưởng đơn vị
+                      </th>
+                      <th class="border border-slate-400 p-1.5 w-22 bg-slate-200/60 text-slate-800">
+                        Điểm bình quân
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Row 1 -->
+                    <tr>
+                      <td class="border border-slate-400 p-2 text-center font-bold">1</td>
+                      <td class="border border-slate-400 p-2">
+                        <span class="font-bold">Khối lượng công việc</span> (Khối lượng công việc hoàn thành so với khối lượng công việc cần thực hiện trong tháng)
+                      </td>
+                      
+                      <!-- Col 1: NLĐ -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditSelfCol ? 'bg-blue-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        ${canEditSelfCol ? `
+                          <input type="number" id="eval-input-volume" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-blue-400 rounded text-blue-900 focus:ring-2 focus:ring-blue-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-input-volume-text" class="font-bold text-sm text-blue-900">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 2: LĐ Phòng -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditMgrCol ? 'bg-amber-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        ${canEditMgrCol ? `
+                          <input type="number" id="eval-mgr-volume-input" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-amber-400 rounded text-amber-900 focus:ring-2 focus:ring-amber-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-mgr-volume" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 3: Phó Trưởng ĐV -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditDeputyCol ? 'bg-purple-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        ${canEditDeputyCol ? `
+                          <input type="number" id="eval-deputy-volume-input" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-purple-400 rounded text-purple-900 focus:ring-2 focus:ring-purple-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-deputy-volume" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 4: Trưởng ĐV -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditHeadCol ? 'bg-emerald-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        ${canEditHeadCol ? `
+                          <input type="number" id="eval-head-volume-input" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-emerald-400 rounded text-emerald-900 focus:ring-2 focus:ring-emerald-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-head-volume" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 5: Điểm BQ -->
+                      <td class="border border-slate-400 p-1.5 text-center bg-slate-100 font-bold">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        <span id="eval-avg-volume" class="font-bold text-sm text-slate-900">0</span>
+                      </td>
+
+                      <td class="border border-slate-400 p-1">
+                        <input type="text" id="eval-note-1" class="w-full px-1.5 py-1 text-xs border border-slate-200 rounded" placeholder="Ghi chú...">
+                      </td>
+                    </tr>
+
+                    <!-- Row 2 -->
+                    <tr>
+                      <td class="border border-slate-400 p-2 text-center font-bold">2</td>
+                      <td class="border border-slate-400 p-2">
+                        <span class="font-bold">Chất lượng công việc</span> (Chất lượng, kết quả, sự chính xác...trong thực hiện công việc)
+                      </td>
+
+                      <!-- Col 1: NLĐ -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditSelfCol ? 'bg-blue-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        ${canEditSelfCol ? `
+                          <input type="number" id="eval-input-quality" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-blue-400 rounded text-blue-900 focus:ring-2 focus:ring-blue-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-input-quality-text" class="font-bold text-sm text-blue-900">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 2: LĐ Phòng -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditMgrCol ? 'bg-amber-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        ${canEditMgrCol ? `
+                          <input type="number" id="eval-mgr-quality-input" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-amber-400 rounded text-amber-900 focus:ring-2 focus:ring-amber-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-mgr-quality" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 3: Phó Trưởng ĐV -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditDeputyCol ? 'bg-purple-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        ${canEditDeputyCol ? `
+                          <input type="number" id="eval-deputy-quality-input" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-purple-400 rounded text-purple-900 focus:ring-2 focus:ring-purple-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-deputy-quality" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 4: Trưởng ĐV -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditHeadCol ? 'bg-emerald-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        ${canEditHeadCol ? `
+                          <input type="number" id="eval-head-quality-input" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-emerald-400 rounded text-emerald-900 focus:ring-2 focus:ring-emerald-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-head-quality" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 5: Điểm BQ -->
+                      <td class="border border-slate-400 p-1.5 text-center bg-slate-100 font-bold">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        <span id="eval-avg-quality" class="font-bold text-sm text-slate-900">0</span>
+                      </td>
+
+                      <td class="border border-slate-400 p-1">
+                        <input type="text" id="eval-note-2" class="w-full px-1.5 py-1 text-xs border border-slate-200 rounded" placeholder="Ghi chú...">
+                      </td>
+                    </tr>
+
+                    <!-- Row 3 -->
+                    <tr>
+                      <td class="border border-slate-400 p-2 text-center font-bold">3</td>
+                      <td class="border border-slate-400 p-2">
+                        <span class="font-bold">Tiến độ thực hiện công việc</span> (Tiến độ thực hiện công việc theo thời hạn được phân công)
+                      </td>
+
+                      <!-- Col 1: NLĐ -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditSelfCol ? 'bg-blue-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        ${canEditSelfCol ? `
+                          <input type="number" id="eval-input-progress" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-blue-400 rounded text-blue-900 focus:ring-2 focus:ring-blue-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-input-progress-text" class="font-bold text-sm text-blue-900">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 2: LĐ Phòng -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditMgrCol ? 'bg-amber-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        ${canEditMgrCol ? `
+                          <input type="number" id="eval-mgr-progress-input" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-amber-400 rounded text-amber-900 focus:ring-2 focus:ring-amber-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-mgr-progress" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 3: Phó Trưởng ĐV -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditDeputyCol ? 'bg-purple-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        ${canEditDeputyCol ? `
+                          <input type="number" id="eval-deputy-progress-input" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-purple-400 rounded text-purple-900 focus:ring-2 focus:ring-purple-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-deputy-progress" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 4: Trưởng ĐV -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditHeadCol ? 'bg-emerald-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        ${canEditHeadCol ? `
+                          <input type="number" id="eval-head-progress-input" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-emerald-400 rounded text-emerald-900 focus:ring-2 focus:ring-emerald-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-head-progress" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 5: Điểm BQ -->
+                      <td class="border border-slate-400 p-1.5 text-center bg-slate-100 font-bold">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        <span id="eval-avg-progress" class="font-bold text-sm text-slate-900">0</span>
+                      </td>
+
+                      <td class="border border-slate-400 p-1">
+                        <input type="text" id="eval-note-3" class="w-full px-1.5 py-1 text-xs border border-slate-200 rounded" placeholder="Ghi chú...">
+                      </td>
+                    </tr>
+
+                    <!-- Row 4 -->
+                    <tr>
+                      <td class="border border-slate-400 p-2 text-center font-bold">4</td>
+                      <td class="border border-slate-400 p-2">
+                        <span class="font-bold">Năng lực, thái độ thực hiện</span> (Khả năng tham mưu lãnh đạo; Khả năng xây dựng cơ chế, quy chế...; Khả năng xử lý tình huống; Ý thức làm việc; Phối hợp công tác...)
+                      </td>
+
+                      <!-- Col 1: NLĐ -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditSelfCol ? 'bg-blue-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        ${canEditSelfCol ? `
+                          <input type="number" id="eval-input-attitude" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-blue-400 rounded text-blue-900 focus:ring-2 focus:ring-blue-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-input-attitude-text" class="font-bold text-sm text-blue-900">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 2: LĐ Phòng -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditMgrCol ? 'bg-amber-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        ${canEditMgrCol ? `
+                          <input type="number" id="eval-mgr-attitude-input" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-amber-400 rounded text-amber-900 focus:ring-2 focus:ring-amber-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-mgr-attitude" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 3: Phó Trưởng ĐV -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditDeputyCol ? 'bg-purple-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        ${canEditDeputyCol ? `
+                          <input type="number" id="eval-deputy-attitude-input" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-purple-400 rounded text-purple-900 focus:ring-2 focus:ring-purple-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-deputy-attitude" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 4: Trưởng ĐV -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditHeadCol ? 'bg-emerald-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        ${canEditHeadCol ? `
+                          <input type="number" id="eval-head-attitude-input" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-emerald-400 rounded text-emerald-900 focus:ring-2 focus:ring-emerald-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-head-attitude" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 5: Điểm BQ -->
+                      <td class="border border-slate-400 p-1.5 text-center bg-slate-100 font-bold">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 20)</div>
+                        <span id="eval-avg-attitude" class="font-bold text-sm text-slate-900">0</span>
+                      </td>
+
+                      <td class="border border-slate-400 p-1">
+                        <input type="text" id="eval-note-4" class="w-full px-1.5 py-1 text-xs border border-slate-200 rounded" placeholder="Ghi chú...">
+                      </td>
+                    </tr>
+
+                    <!-- Row II -->
+                    <tr>
+                      <td class="border border-slate-400 p-2 text-center font-bold">II</td>
+                      <td class="border border-slate-400 p-2">
+                        <span class="font-bold">Ý thức chấp hành kỷ luật, nội quy lao động</span>
+                      </td>
+
+                      <!-- Col 1: NLĐ -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditSelfCol ? 'bg-blue-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 10)</div>
+                        ${canEditSelfCol ? `
+                          <input type="number" id="eval-input-discipline" min="0" max="10" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 10)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-blue-400 rounded text-blue-900 focus:ring-2 focus:ring-blue-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-input-discipline-text" class="font-bold text-sm text-blue-900">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 2: LĐ Phòng -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditMgrCol ? 'bg-amber-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 10)</div>
+                        ${canEditMgrCol ? `
+                          <input type="number" id="eval-mgr-discipline-input" min="0" max="10" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 10)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-amber-400 rounded text-amber-900 focus:ring-2 focus:ring-amber-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-mgr-discipline" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 3: Phó Trưởng ĐV -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditDeputyCol ? 'bg-purple-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 10)</div>
+                        ${canEditDeputyCol ? `
+                          <input type="number" id="eval-deputy-discipline-input" min="0" max="10" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 10)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-purple-400 rounded text-purple-900 focus:ring-2 focus:ring-purple-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-deputy-discipline" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 4: Trưởng ĐV -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditHeadCol ? 'bg-emerald-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 10)</div>
+                        ${canEditHeadCol ? `
+                          <input type="number" id="eval-head-discipline-input" min="0" max="10" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 10)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-emerald-400 rounded text-emerald-900 focus:ring-2 focus:ring-emerald-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-head-discipline" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 5: Điểm BQ -->
+                      <td class="border border-slate-400 p-1.5 text-center bg-slate-100 font-bold">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 10)</div>
+                        <span id="eval-avg-discipline" class="font-bold text-sm text-slate-900">0</span>
+                      </td>
+
+                      <td class="border border-slate-400 p-1">
+                        <input type="text" id="eval-note-5" class="w-full px-1.5 py-1 text-xs border border-slate-200 rounded" placeholder="Ghi chú...">
+                      </td>
+                    </tr>
+
+                    <!-- Row III -->
+                    <tr>
+                      <td class="border border-slate-400 p-2 text-center font-bold">III</td>
+                      <td class="border border-slate-400 p-2">
+                        <span class="font-bold">Kết quả kiểm tra nghiệp vụ</span>
+                      </td>
+
+                      <!-- Col 1: NLĐ -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditSelfCol ? 'bg-blue-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 10)</div>
+                        ${canEditSelfCol ? `
+                          <input type="number" id="eval-input-test" min="0" max="10" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 10)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-blue-400 rounded text-blue-900 focus:ring-2 focus:ring-blue-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-input-test-text" class="font-bold text-sm text-blue-900">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 2: LĐ Phòng -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditMgrCol ? 'bg-amber-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 10)</div>
+                        ${canEditMgrCol ? `
+                          <input type="number" id="eval-mgr-test-input" min="0" max="10" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 10)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-amber-400 rounded text-amber-900 focus:ring-2 focus:ring-amber-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-mgr-test" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 3: Phó Trưởng ĐV -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditDeputyCol ? 'bg-purple-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 10)</div>
+                        ${canEditDeputyCol ? `
+                          <input type="number" id="eval-deputy-test-input" min="0" max="10" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 10)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-purple-400 rounded text-purple-900 focus:ring-2 focus:ring-purple-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-deputy-test" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 4: Trưởng ĐV -->
+                      <td class="border border-slate-400 p-1.5 text-center ${canEditHeadCol ? 'bg-emerald-50/40' : 'bg-slate-50/50'}">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 10)</div>
+                        ${canEditHeadCol ? `
+                          <input type="number" id="eval-head-test-input" min="0" max="10" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 10)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-emerald-400 rounded text-emerald-900 focus:ring-2 focus:ring-emerald-500 shadow-inner" placeholder="0">
+                        ` : `
+                          <span id="eval-head-test" class="font-bold text-sm text-slate-700">0</span>
+                        `}
+                      </td>
+
+                      <!-- Col 5: Điểm BQ -->
+                      <td class="border border-slate-400 p-1.5 text-center bg-slate-100 font-bold">
+                        <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 10)</div>
+                        <span id="eval-avg-test" class="font-bold text-sm text-slate-900">0</span>
+                      </td>
+
+                      <td class="border border-slate-400 p-1">
+                        <input type="text" id="eval-note-6" class="w-full px-1.5 py-1 text-xs border border-slate-200 rounded" placeholder="Ghi chú...">
+                      </td>
+                    </tr>
+
+                    <!-- Total Row -->
+                    <tr class="bg-blue-50/80 font-bold text-xs">
+                      <td class="border border-slate-400 p-2 text-center"></td>
+                      <td class="border border-slate-400 p-2.5 font-extrabold text-sm text-slate-900 flex items-center justify-between">
+                        <span>Tổng điểm:</span>
+                        <span id="eval-badge-rating" class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          Loại A (Xuất sắc)
+                        </span>
+                      </td>
+                      
+                      <!-- Total Col 1 -->
+                      <td class="border border-slate-400 p-2 text-center text-sm font-black text-blue-900 bg-blue-100">
+                        <span id="eval-score-total">0</span>
+                      </td>
+
+                      <!-- Total Col 2 -->
+                      <td class="border border-slate-400 p-2 text-center text-sm font-black text-amber-900 bg-amber-100/70">
+                        <span id="eval-mgr-total">0</span>
+                      </td>
+
+                      <!-- Total Col 3 -->
+                      <td class="border border-slate-400 p-2 text-center text-sm font-black text-purple-900 bg-purple-100/70">
+                        <span id="eval-deputy-total">0</span>
+                      </td>
+
+                      <!-- Total Col 4 -->
+                      <td class="border border-slate-400 p-2 text-center text-sm font-black text-emerald-900 bg-emerald-100/70">
+                        <span id="eval-head-total">0</span>
+                      </td>
+
+                      <!-- Total Col 5 -->
+                      <td class="border border-slate-400 p-2 text-center text-sm font-black text-slate-900 bg-slate-200">
+                        <span id="eval-avg-total">0</span>
+                      </td>
+
+                      <td class="border border-slate-400 p-2"></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- General Comments & Notes -->
+              <div class="mt-4">
+                <label class="block text-xs font-bold text-slate-700 mb-1">
+                  ${isSelf ? 'Ý kiến / Giải trình thêm của cán bộ:' : 'Ý kiến nhận xét & đánh giá của Lãnh đạo:'}
+                </label>
+                <textarea id="eval-input-notes" rows="2" class="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-inner" placeholder="${isSelf ? 'Nhập tóm tắt thành tích nổi bật hoặc kiến nghị trong tháng (nếu có)...' : 'Nhập nhận xét của lãnh đạo đối với cán bộ trong kỳ đánh giá...'}"></textarea>
+              </div>
+
+              <!-- Signatures Section -->
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 text-center mt-10 pt-4 border-t border-slate-200">
+                <div>
+                  <div class="font-bold uppercase text-xs text-slate-800">NGƯỜI TỰ ĐÁNH GIÁ</div>
+                  <div class="italic text-[11px] text-slate-500">(Ký, ghi rõ họ tên)</div>
+                  <div class="h-16 flex items-end justify-center">
+                    <span id="eval-sign-user" class="font-bold text-xs text-slate-800 underline">--</span>
+                  </div>
+                </div>
+                <div>
+                  <div class="font-bold uppercase text-xs text-slate-800">LÃNH ĐẠO PHÒNG</div>
+                  <div class="italic text-[11px] text-slate-500">(Ký, ghi rõ họ tên)</div>
+                  <div class="h-16 flex items-end justify-center">
+                    <span id="eval-sign-mgr" class="font-semibold text-xs text-slate-600">
+                      ${isManager ? Auth.user.full_name : '<span class="text-slate-400 italic">(Chưa ký)</span>'}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <div class="font-bold uppercase text-xs text-slate-800">TRƯỞNG ĐƠN VỊ</div>
+                  <div class="italic text-[11px] text-slate-500">(Ký, ghi rõ họ tên)</div>
+                  <div class="h-16 flex items-end justify-center">
+                    <span id="eval-sign-head" class="font-semibold text-xs text-slate-600">
+                      ${isDirector ? Auth.user.full_name : '<span class="text-slate-400 italic">(Chưa ký)</span>'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Modal Footer Actions -->
+          <div class="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-500 dark:text-slate-400">
+                Điểm tự chấm: <strong id="eval-footer-self-total" class="text-blue-600 dark:text-blue-400 font-black text-sm">0</strong> / 100
+              </span>
+              <span class="text-slate-300 dark:text-slate-600">|</span>
+              <span class="text-xs text-slate-500 dark:text-slate-400">
+                Điểm bình quân: <strong id="eval-footer-avg-total" class="text-emerald-600 dark:text-emerald-400 font-black text-sm">0</strong> / 100
+              </span>
+            </div>
+            <div class="flex items-center gap-2.5">
+              <button onclick="App.closeModal()" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition">
+                Đóng
+              </button>
+              <button onclick="PersonalLogs.saveSelfEvaluation(${month}, ${year}, ${targetUserId})" id="btn-save-eval" class="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 transition">
+                <i class="ph-bold ph-floppy-disk text-base"></i> Lưu phiếu đánh giá
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+
+    // Fetch and populate evaluation data
+    try {
+      const data = await apiFetch(`/api/evaluations/my?month=${month}&year=${year}&user_id=${targetUserId}`);
+      
+      const loadingEl = document.getElementById('eval-modal-loading');
+      const contentEl = document.getElementById('eval-modal-content');
+      if (loadingEl) loadingEl.classList.add('hidden');
+      if (contentEl) contentEl.classList.remove('hidden');
+
+      const rawDeptName = data.department_name || Auth.user?.department_name || 'Phòng Quản lý Đào tạo và Thư viện';
+      const cleanDeptName = rawDeptName.toUpperCase().startsWith('PHÒNG') ? rawDeptName.toUpperCase() : ('PHÒNG ' + rawDeptName.toUpperCase());
+      
+      const headerDept = document.getElementById('eval-header-dept');
+      if (headerDept) headerDept.innerText = cleanDeptName;
+
+      const infoName = document.getElementById('eval-info-name');
+      if (infoName) infoName.innerText = data.full_name || '--';
+
+      const infoPos = document.getElementById('eval-info-position');
+      if (infoPos) infoPos.innerText = this.formatUserPosition(data.position, data.role);
+
+      const infoDept = document.getElementById('eval-info-dept');
+      if (infoDept) infoDept.innerText = rawDeptName;
+
+      const signUser = document.getElementById('eval-sign-user');
+      if (signUser) signUser.innerText = data.full_name || '--';
+
+      // 1. Set NLĐ (Self) score inputs or text displays
+      if (canEditSelfCol) {
+        if (document.getElementById('eval-input-volume')) document.getElementById('eval-input-volume').value = data.score_volume || 0;
+        if (document.getElementById('eval-input-quality')) document.getElementById('eval-input-quality').value = data.score_quality || 0;
+        if (document.getElementById('eval-input-progress')) document.getElementById('eval-input-progress').value = data.score_progress || 0;
+        if (document.getElementById('eval-input-attitude')) document.getElementById('eval-input-attitude').value = data.score_attitude || 0;
+        if (document.getElementById('eval-input-discipline')) document.getElementById('eval-input-discipline').value = data.score_discipline || 0;
+        if (document.getElementById('eval-input-test')) document.getElementById('eval-input-test').value = data.score_test || 0;
+      } else {
+        if (document.getElementById('eval-input-volume-text')) document.getElementById('eval-input-volume-text').innerText = data.score_volume || 0;
+        if (document.getElementById('eval-input-quality-text')) document.getElementById('eval-input-quality-text').innerText = data.score_quality || 0;
+        if (document.getElementById('eval-input-progress-text')) document.getElementById('eval-input-progress-text').innerText = data.score_progress || 0;
+        if (document.getElementById('eval-input-attitude-text')) document.getElementById('eval-input-attitude-text').innerText = data.score_attitude || 0;
+        if (document.getElementById('eval-input-discipline-text')) document.getElementById('eval-input-discipline-text').innerText = data.score_discipline || 0;
+        if (document.getElementById('eval-input-test-text')) document.getElementById('eval-input-test-text').innerText = data.score_test || 0;
+      }
+
+      // 2. Set LĐ Phòng inputs or text displays
+      if (canEditMgrCol) {
+        if (document.getElementById('eval-mgr-volume-input')) document.getElementById('eval-mgr-volume-input').value = data.mgr_score_volume !== null && data.mgr_score_volume !== undefined ? data.mgr_score_volume : (data.score_volume || 0);
+        if (document.getElementById('eval-mgr-quality-input')) document.getElementById('eval-mgr-quality-input').value = data.mgr_score_quality !== null && data.mgr_score_quality !== undefined ? data.mgr_score_quality : (data.score_quality || 0);
+        if (document.getElementById('eval-mgr-progress-input')) document.getElementById('eval-mgr-progress-input').value = data.mgr_score_progress !== null && data.mgr_score_progress !== undefined ? data.mgr_score_progress : (data.score_progress || 0);
+        if (document.getElementById('eval-mgr-attitude-input')) document.getElementById('eval-mgr-attitude-input').value = data.mgr_score_attitude !== null && data.mgr_score_attitude !== undefined ? data.mgr_score_attitude : (data.score_attitude || 0);
+        if (document.getElementById('eval-mgr-discipline-input')) document.getElementById('eval-mgr-discipline-input').value = data.mgr_score_discipline !== null && data.mgr_score_discipline !== undefined ? data.mgr_score_discipline : (data.score_discipline || 0);
+        if (document.getElementById('eval-mgr-test-input')) document.getElementById('eval-mgr-test-input').value = data.mgr_score_test !== null && data.mgr_score_test !== undefined ? data.mgr_score_test : (data.score_test || 0);
+      } else {
+        if (document.getElementById('eval-mgr-volume')) document.getElementById('eval-mgr-volume').innerText = data.mgr_score_volume !== null && data.mgr_score_volume !== undefined ? data.mgr_score_volume : 0;
+        if (document.getElementById('eval-mgr-quality')) document.getElementById('eval-mgr-quality').innerText = data.mgr_score_quality !== null && data.mgr_score_quality !== undefined ? data.mgr_score_quality : 0;
+        if (document.getElementById('eval-mgr-progress')) document.getElementById('eval-mgr-progress').innerText = data.mgr_score_progress !== null && data.mgr_score_progress !== undefined ? data.mgr_score_progress : 0;
+        if (document.getElementById('eval-mgr-attitude')) document.getElementById('eval-mgr-attitude').innerText = data.mgr_score_attitude !== null && data.mgr_score_attitude !== undefined ? data.mgr_score_attitude : 0;
+        if (document.getElementById('eval-mgr-discipline')) document.getElementById('eval-mgr-discipline').innerText = data.mgr_score_discipline !== null && data.mgr_score_discipline !== undefined ? data.mgr_score_discipline : 0;
+        if (document.getElementById('eval-mgr-test')) document.getElementById('eval-mgr-test').innerText = data.mgr_score_test !== null && data.mgr_score_test !== undefined ? data.mgr_score_test : 0;
+      }
+
+      // 3. Set Deputy inputs or text displays
+      if (canEditDeputyCol) {
+        if (document.getElementById('eval-deputy-volume-input')) document.getElementById('eval-deputy-volume-input').value = data.deputy_score_volume || 0;
+        if (document.getElementById('eval-deputy-quality-input')) document.getElementById('eval-deputy-quality-input').value = data.deputy_score_quality || 0;
+        if (document.getElementById('eval-deputy-progress-input')) document.getElementById('eval-deputy-progress-input').value = data.deputy_score_progress || 0;
+        if (document.getElementById('eval-deputy-attitude-input')) document.getElementById('eval-deputy-attitude-input').value = data.deputy_score_attitude || 0;
+        if (document.getElementById('eval-deputy-discipline-input')) document.getElementById('eval-deputy-discipline-input').value = data.deputy_score_discipline || 0;
+        if (document.getElementById('eval-deputy-test-input')) document.getElementById('eval-deputy-test-input').value = data.deputy_score_test || 0;
+      } else {
+        if (document.getElementById('eval-deputy-volume')) document.getElementById('eval-deputy-volume').innerText = data.deputy_score_volume || 0;
+        if (document.getElementById('eval-deputy-quality')) document.getElementById('eval-deputy-quality').innerText = data.deputy_score_quality || 0;
+        if (document.getElementById('eval-deputy-progress')) document.getElementById('eval-deputy-progress').innerText = data.deputy_score_progress || 0;
+        if (document.getElementById('eval-deputy-attitude')) document.getElementById('eval-deputy-attitude').innerText = data.deputy_score_attitude || 0;
+        if (document.getElementById('eval-deputy-discipline')) document.getElementById('eval-deputy-discipline').innerText = data.deputy_score_discipline || 0;
+        if (document.getElementById('eval-deputy-test')) document.getElementById('eval-deputy-test').innerText = data.deputy_score_test || 0;
+      }
+
+      // 4. Set Head inputs or text displays
+      if (canEditHeadCol) {
+        if (document.getElementById('eval-head-volume-input')) document.getElementById('eval-head-volume-input').value = data.head_score_volume || 0;
+        if (document.getElementById('eval-head-quality-input')) document.getElementById('eval-head-quality-input').value = data.head_score_quality || 0;
+        if (document.getElementById('eval-head-progress-input')) document.getElementById('eval-head-progress-input').value = data.head_score_progress || 0;
+        if (document.getElementById('eval-head-attitude-input')) document.getElementById('eval-head-attitude-input').value = data.head_score_attitude || 0;
+        if (document.getElementById('eval-head-discipline-input')) document.getElementById('eval-head-discipline-input').value = data.head_score_discipline || 0;
+        if (document.getElementById('eval-head-test-input')) document.getElementById('eval-head-test-input').value = data.head_score_test || 0;
+      } else {
+        if (document.getElementById('eval-head-volume')) document.getElementById('eval-head-volume').innerText = data.head_score_volume || 0;
+        if (document.getElementById('eval-head-quality')) document.getElementById('eval-head-quality').innerText = data.head_score_quality || 0;
+        if (document.getElementById('eval-head-progress')) document.getElementById('eval-head-progress').innerText = data.head_score_progress || 0;
+        if (document.getElementById('eval-head-attitude')) document.getElementById('eval-head-attitude').innerText = data.head_score_attitude || 0;
+        if (document.getElementById('eval-head-discipline')) document.getElementById('eval-head-discipline').innerText = data.head_score_discipline || 0;
+        if (document.getElementById('eval-head-test')) document.getElementById('eval-head-test').innerText = data.head_score_test || 0;
+      }
+
+      // Notes
+      if (document.getElementById('eval-input-notes')) {
+        document.getElementById('eval-input-notes').value = (isSelf ? data.notes : (data.mgr_notes || data.notes)) || '';
+      }
+
+      this.recalcEvalScores();
+    } catch (err) {
+      console.error(err);
+      const loadingEl = document.getElementById('eval-modal-loading');
+      if (loadingEl) {
+        loadingEl.innerHTML = `
+          <div class="text-rose-500 py-10 font-bold text-sm">
+            <i class="ph-bold ph-warning-circle text-3xl mb-2"></i>
+            <p>Không thể tải phiếu đánh giá: ${err.message}</p>
+          </div>
+        `;
+      }
+    }
+  },
+
+  getVal(id, defaultVal = 0) {
+    const el = document.getElementById(id);
+    if (!el) return defaultVal;
+    if (el.tagName === 'INPUT') {
+      const v = parseFloat(el.value);
+      return isNaN(v) ? defaultVal : v;
+    }
+    const v = parseFloat(el.innerText);
+    return isNaN(v) ? defaultVal : v;
+  },
+
+  recalcEvalScores() {
+    // 1. Col 1 (NLĐ Self)
+    const sv = Math.min(20, Math.max(0, this.getVal('eval-input-volume', this.getVal('eval-input-volume-text'))));
+    const sq = Math.min(20, Math.max(0, this.getVal('eval-input-quality', this.getVal('eval-input-quality-text'))));
+    const sp = Math.min(20, Math.max(0, this.getVal('eval-input-progress', this.getVal('eval-input-progress-text'))));
+    const sa = Math.min(20, Math.max(0, this.getVal('eval-input-attitude', this.getVal('eval-input-attitude-text'))));
+    const sd = Math.min(10, Math.max(0, this.getVal('eval-input-discipline', this.getVal('eval-input-discipline-text'))));
+    const st = Math.min(10, Math.max(0, this.getVal('eval-input-test', this.getVal('eval-input-test-text'))));
+    const selfTotal = parseFloat((sv + sq + sp + sa + sd + st).toFixed(2));
+
+    const selfTotalEl = document.getElementById('eval-score-total');
+    if (selfTotalEl) selfTotalEl.innerText = selfTotal;
+    const footerSelfTotal = document.getElementById('eval-footer-self-total');
+    if (footerSelfTotal) footerSelfTotal.innerText = selfTotal;
+
+    // 2. Col 2 (LĐ Phòng)
+    const mv = Math.min(20, Math.max(0, this.getVal('eval-mgr-volume-input', this.getVal('eval-mgr-volume'))));
+    const mq = Math.min(20, Math.max(0, this.getVal('eval-mgr-quality-input', this.getVal('eval-mgr-quality'))));
+    const mp = Math.min(20, Math.max(0, this.getVal('eval-mgr-progress-input', this.getVal('eval-mgr-progress'))));
+    const ma = Math.min(20, Math.max(0, this.getVal('eval-mgr-attitude-input', this.getVal('eval-mgr-attitude'))));
+    const md = Math.min(10, Math.max(0, this.getVal('eval-mgr-discipline-input', this.getVal('eval-mgr-discipline'))));
+    const mt = Math.min(10, Math.max(0, this.getVal('eval-mgr-test-input', this.getVal('eval-mgr-test'))));
+    const mgrTotal = parseFloat((mv + mq + mp + ma + md + mt).toFixed(2));
+
+    const mgrTotalEl = document.getElementById('eval-mgr-total');
+    if (mgrTotalEl) mgrTotalEl.innerText = mgrTotal;
+
+    // 3. Col 3 (Deputy)
+    const dv = Math.min(20, Math.max(0, this.getVal('eval-deputy-volume-input', this.getVal('eval-deputy-volume'))));
+    const dq = Math.min(20, Math.max(0, this.getVal('eval-deputy-quality-input', this.getVal('eval-deputy-quality'))));
+    const dp = Math.min(20, Math.max(0, this.getVal('eval-deputy-progress-input', this.getVal('eval-deputy-progress'))));
+    const da = Math.min(20, Math.max(0, this.getVal('eval-deputy-attitude-input', this.getVal('eval-deputy-attitude'))));
+    const dd = Math.min(10, Math.max(0, this.getVal('eval-deputy-discipline-input', this.getVal('eval-deputy-discipline'))));
+    const dt = Math.min(10, Math.max(0, this.getVal('eval-deputy-test-input', this.getVal('eval-deputy-test'))));
+    const depTotal = parseFloat((dv + dq + dp + da + dd + dt).toFixed(2));
+
+    const depTotalEl = document.getElementById('eval-deputy-total');
+    if (depTotalEl) depTotalEl.innerText = depTotal;
+
+    // 4. Col 4 (Head)
+    const hv = Math.min(20, Math.max(0, this.getVal('eval-head-volume-input', this.getVal('eval-head-volume'))));
+    const hq = Math.min(20, Math.max(0, this.getVal('eval-head-quality-input', this.getVal('eval-head-quality'))));
+    const hp = Math.min(20, Math.max(0, this.getVal('eval-head-progress-input', this.getVal('eval-head-progress'))));
+    const ha = Math.min(20, Math.max(0, this.getVal('eval-head-attitude-input', this.getVal('eval-head-attitude'))));
+    const hd = Math.min(10, Math.max(0, this.getVal('eval-head-discipline-input', this.getVal('eval-head-discipline'))));
+    const ht = Math.min(10, Math.max(0, this.getVal('eval-head-test-input', this.getVal('eval-head-test'))));
+    const headTotal = parseFloat((hv + hq + hp + ha + hd + ht).toFixed(2));
+
+    const headTotalEl = document.getElementById('eval-head-total');
+    if (headTotalEl) headTotalEl.innerText = headTotal;
+
+    // 5. Col 5 (Average Criteria Scores)
+    const calcAvgItem = (arr) => {
+      const active = arr.filter(n => n > 0);
+      return active.length > 0 ? parseFloat((active.reduce((a, b) => a + b, 0) / active.length).toFixed(1)) : 0;
+    };
+
+    const avgV = calcAvgItem([sv, mv, dv, hv]);
+    const avgQ = calcAvgItem([sq, mq, dq, hq]);
+    const avgP = calcAvgItem([sp, mp, dp, hp]);
+    const avgA = calcAvgItem([sa, ma, da, ha]);
+    const avgD = calcAvgItem([sd, md, dd, hd]);
+    const avgT = calcAvgItem([st, mt, dt, ht]);
+
+    if (document.getElementById('eval-avg-volume')) document.getElementById('eval-avg-volume').innerText = avgV;
+    if (document.getElementById('eval-avg-quality')) document.getElementById('eval-avg-quality').innerText = avgQ;
+    if (document.getElementById('eval-avg-progress')) document.getElementById('eval-avg-progress').innerText = avgP;
+    if (document.getElementById('eval-avg-attitude')) document.getElementById('eval-avg-attitude').innerText = avgA;
+    if (document.getElementById('eval-avg-discipline')) document.getElementById('eval-avg-discipline').innerText = avgD;
+    if (document.getElementById('eval-avg-test')) document.getElementById('eval-avg-test').innerText = avgT;
+
+    const totalsArr = [selfTotal, mgrTotal, depTotal, headTotal].filter(t => t > 0);
+    const avgTotal = totalsArr.length > 0 ? parseFloat((totalsArr.reduce((a, b) => a + b, 0) / totalsArr.length).toFixed(2)) : 0;
+
+    const avgTotalEl = document.getElementById('eval-avg-total');
+    if (avgTotalEl) avgTotalEl.innerText = avgTotal;
+    const footerAvgTotal = document.getElementById('eval-footer-avg-total');
+    if (footerAvgTotal) footerAvgTotal.innerText = avgTotal;
+
+    // Benchmark Rating against standard
+    const evalBenchmark = avgTotal > 0 ? avgTotal : selfTotal;
+    const ratingBadge = document.getElementById('eval-badge-rating');
+    if (ratingBadge) {
+      if (evalBenchmark >= 90) {
+        ratingBadge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300';
+        ratingBadge.innerText = '🏆 Loại A (Xuất sắc)';
+      } else if (evalBenchmark >= 80) {
+        ratingBadge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-300';
+        ratingBadge.innerText = '⭐ Loại B (Hoàn thành Tốt)';
+      } else if (evalBenchmark >= 70) {
+        ratingBadge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300';
+        ratingBadge.innerText = '✅ Loại C (Hoàn thành)';
+      } else {
+        ratingBadge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300';
+        ratingBadge.innerText = '⚠️ Loại D (Chưa hoàn thành)';
+      }
+    }
+  },
+
+  async saveSelfEvaluation(month, year, targetUserId) {
+    const saveBtn = document.getElementById('btn-save-eval');
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<i class="ph ph-spinner animate-spin text-base"></i> Đang lưu...';
+    }
+
+    try {
+      const userCol = this.getUserEvaluationColumn(Auth.user);
+
+      const payload = {
+        user_id: targetUserId,
+        month,
+        year,
+        period_name: `Kỳ tạm ứng thù lao theo hiệu quả công việc V2 tháng ${month} năm ${year}`
+      };
+
+      // 1. NHÂN VIÊN / CHUYÊN VIÊN -> KÊ CỘT 1 (NLĐ)
+      if (userCol === 'staff') {
+        payload.score_volume = Math.min(20, Math.max(0, this.getVal('eval-input-volume', this.getVal('eval-input-volume-text'))));
+        payload.score_quality = Math.min(20, Math.max(0, this.getVal('eval-input-quality', this.getVal('eval-input-quality-text'))));
+        payload.score_progress = Math.min(20, Math.max(0, this.getVal('eval-input-progress', this.getVal('eval-input-progress-text'))));
+        payload.score_attitude = Math.min(20, Math.max(0, this.getVal('eval-input-attitude', this.getVal('eval-input-attitude-text'))));
+        payload.score_discipline = Math.min(10, Math.max(0, this.getVal('eval-input-discipline', this.getVal('eval-input-discipline-text'))));
+        payload.score_test = Math.min(10, Math.max(0, this.getVal('eval-input-test', this.getVal('eval-input-test-text'))));
+        payload.notes = (document.getElementById('eval-input-notes')?.value || '').trim();
+      } 
+      // 2. LÃNH ĐẠO PHÒNG (Trưởng phòng, Phó phòng) -> KÊ CỘT 2
+      else if (userCol === 'manager') {
+        payload.mgr_score_volume = Math.min(20, Math.max(0, this.getVal('eval-mgr-volume-input', this.getVal('eval-mgr-volume'))));
+        payload.mgr_score_quality = Math.min(20, Math.max(0, this.getVal('eval-mgr-quality-input', this.getVal('eval-mgr-quality'))));
+        payload.mgr_score_progress = Math.min(20, Math.max(0, this.getVal('eval-mgr-progress-input', this.getVal('eval-mgr-progress'))));
+        payload.mgr_score_attitude = Math.min(20, Math.max(0, this.getVal('eval-mgr-attitude-input', this.getVal('eval-mgr-attitude'))));
+        payload.mgr_score_discipline = Math.min(10, Math.max(0, this.getVal('eval-mgr-discipline-input', this.getVal('eval-mgr-discipline'))));
+        payload.mgr_score_test = Math.min(10, Math.max(0, this.getVal('eval-mgr-test-input', this.getVal('eval-mgr-test'))));
+        payload.mgr_notes = (document.getElementById('eval-input-notes')?.value || '').trim();
+      } 
+      // 3. PHÓ TRƯỞNG ĐƠN VỊ (Phó Giám đốc) -> KÊ CỘT 3
+      else if (userCol === 'deputy') {
+        payload.deputy_score_volume = Math.min(20, Math.max(0, this.getVal('eval-deputy-volume-input', this.getVal('eval-deputy-volume'))));
+        payload.deputy_score_quality = Math.min(20, Math.max(0, this.getVal('eval-deputy-quality-input', this.getVal('eval-deputy-quality'))));
+        payload.deputy_score_progress = Math.min(20, Math.max(0, this.getVal('eval-deputy-progress-input', this.getVal('eval-deputy-progress'))));
+        payload.deputy_score_attitude = Math.min(20, Math.max(0, this.getVal('eval-deputy-attitude-input', this.getVal('eval-deputy-attitude'))));
+        payload.deputy_score_discipline = Math.min(10, Math.max(0, this.getVal('eval-deputy-discipline-input', this.getVal('eval-deputy-discipline'))));
+        payload.deputy_score_test = Math.min(10, Math.max(0, this.getVal('eval-deputy-test-input', this.getVal('eval-deputy-test'))));
+        payload.deputy_notes = (document.getElementById('eval-input-notes')?.value || '').trim();
+      } 
+      // 4. TRƯỞNG ĐƠN VỊ (Giám đốc, Admin) -> KÊ CỘT 4
+      else if (userCol === 'head') {
+        payload.head_score_volume = Math.min(20, Math.max(0, this.getVal('eval-head-volume-input', this.getVal('eval-head-volume'))));
+        payload.head_score_quality = Math.min(20, Math.max(0, this.getVal('eval-head-quality-input', this.getVal('eval-head-quality'))));
+        payload.head_score_progress = Math.min(20, Math.max(0, this.getVal('eval-head-progress-input', this.getVal('eval-head-progress'))));
+        payload.head_score_attitude = Math.min(20, Math.max(0, this.getVal('eval-head-attitude-input', this.getVal('eval-head-attitude'))));
+        payload.head_score_discipline = Math.min(10, Math.max(0, this.getVal('eval-head-discipline-input', this.getVal('eval-head-discipline'))));
+        payload.head_score_test = Math.min(10, Math.max(0, this.getVal('eval-head-test-input', this.getVal('eval-head-test'))));
+        payload.head_notes = (document.getElementById('eval-input-notes')?.value || '').trim();
+      }
+
+      const res = await apiFetch('/api/evaluations/my', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      if (window.showToast) {
+        showToast('success', `Đã lưu phiếu đánh giá tháng ${month}/${year} thành công!`);
+      } else {
+        alert(`✅ Đã lưu phiếu đánh giá tháng ${month}/${year} thành công!`);
+      }
+
+      App.closeModal();
+    } catch (err) {
+      console.error(err);
+      alert('Lỗi lưu phiếu đánh giá: ' + err.message);
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '<i class="ph-bold ph-floppy-disk text-base"></i> Lưu phiếu đánh giá';
+      }
+    }
+  },
+
+  printSelfEvaluation() {
+    const printContent = document.getElementById('printable-eval-form');
+    if (!printContent) return;
+
+    const now = new Date();
+    const win = window.open('', '_blank', 'width=900,height=800');
+    win.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Phiếu Đánh Giá Mức Độ Hoàn Thành Công Việc - Mẫu 01A</title>
+        <meta charset="utf-8">
+        <style>
+          @page { size: A4 portrait; margin: 15mm 15mm 15mm 15mm; }
+          body { font-family: "Times New Roman", Times, serif; font-size: 13pt; line-height: 1.3; color: #000; margin: 0; padding: 20px; }
+          .header-table { width: 100%; border: none; margin-bottom: 20px; }
+          .header-table td { vertical-align: top; text-align: center; }
+          .badge-box { border: 1px solid #000; padding: 4px 8px; font-weight: bold; font-size: 10pt; display: inline-block; margin-bottom: 10px; }
+          .title { text-align: center; margin: 20px 0; }
+          .title h2 { font-size: 15pt; font-weight: bold; margin: 0; text-transform: uppercase; }
+          .title p { margin: 4px 0; font-size: 13pt; font-weight: bold; }
+          .info-table { width: 100%; margin-bottom: 15px; }
+          .info-table td { padding: 4px 0; font-size: 13pt; }
+          table.eval-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          table.eval-table th, table.eval-table td { border: 1px solid #000; padding: 6px 8px; font-size: 11pt; }
+          table.eval-table th { font-weight: bold; text-align: center; background-color: #f2f2f2; }
+          .text-center { text-align: center; }
+          .text-right { text-align: right; }
+          .font-bold { font-weight: bold; }
+          .signatures { width: 100%; margin-top: 30px; text-align: center; }
+          .signatures td { width: 33.33%; vertical-align: top; padding-top: 10px; }
+          input { border: none; font-weight: bold; text-align: center; font-size: 11pt; background: transparent; }
+          @media print {
+            body { padding: 0; }
+            .no-print { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div style="text-align: right; margin-bottom: 10px;">
+          <div class="badge-box">MẪU 01A (Lưu tại đơn vị)</div>
+        </div>
+        <table class="header-table">
+          <tr>
+            <td style="width: 50%;">
+              <strong>NGÂN HÀNG NÔNG NGHIỆP<br>VÀ PHÁT TRIỂN NÔNG THÔN VIỆT NAM</strong><br>
+              <u style="font-weight: bold;">${document.getElementById('eval-header-dept')?.innerText || 'PHÒNG QUẢN LÝ ĐÀO TẠO VÀ THƯ VIỆN'}</u>
+            </td>
+            <td style="width: 50%;">
+              <strong>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong><br>
+              <strong>Độc lập – Tự do – Hạnh phúc</strong><br>
+              <div style="width: 110px; height: 1px; background: #000; margin: 5px auto;"></div>
+              <em style="font-size: 11pt;">Hà Nội, ngày ${now.getDate()} tháng ${now.getMonth() + 1} năm ${now.getFullYear()}</em>
+            </td>
+          </tr>
+        </table>
+
+        <div class="title">
+          <h2>PHIẾU ĐÁNH GIÁ MỨC ĐỘ HOÀN THÀNH CÔNG VIỆC</h2>
+          <p>${document.getElementById('eval-title-period')?.innerText || 'Kỳ tạm ứng thù lao theo hiệu quả công việc V2'}</p>
+          <em style="font-size: 11pt;">(Áp dụng cho nhân viên)</em>
+        </div>
+
+        <table class="info-table">
+          <tr>
+            <td style="width: 120px;"><strong>Họ và tên:</strong></td>
+            <td><strong>${document.getElementById('eval-info-name')?.innerText || ''}</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Chức vụ:</strong></td>
+            <td>${document.getElementById('eval-info-position')?.innerText || ''}</td>
+          </tr>
+          <tr>
+            <td><strong>Phòng/Bộ phận:</strong></td>
+            <td>${document.getElementById('eval-info-dept')?.innerText || ''}</td>
+          </tr>
+        </table>
+
+        <table class="eval-table">
+          <thead>
+            <tr>
+              <th rowspan="2" style="width: 30px;">TT</th>
+              <th rowspan="2">Tiêu chí đánh giá</th>
+              <th colspan="5">Điểm đánh giá</th>
+              <th rowspan="2" style="width: 80px;">Ghi chú</th>
+            </tr>
+            <tr>
+              <th style="width: 80px;">NLĐ (Tự đánh giá)</th>
+              <th style="width: 70px;">LĐ phòng / NV</th>
+              <th style="width: 70px;">Phó trưởng ĐV</th>
+              <th style="width: 70px;">Trưởng ĐV</th>
+              <th style="width: 70px;">Điểm BQ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="text-center font-bold">1</td>
+              <td><strong>Khối lượng công việc</strong> (Khối lượng công việc hoàn thành so với khối lượng công việc cần thực hiện trong tháng)</td>
+              <td class="text-center font-bold"><div>(Tối đa 20)</div>${this.getVal('eval-input-volume', this.getVal('eval-input-volume-text'))}</td>
+              <td class="text-center"><div>(Tối đa 20)</div>${this.getVal('eval-mgr-volume-input', this.getVal('eval-mgr-volume'))}</td>
+              <td class="text-center"><div>(Tối đa 20)</div>${this.getVal('eval-deputy-volume-input', this.getVal('eval-deputy-volume'))}</td>
+              <td class="text-center"><div>(Tối đa 20)</div>${this.getVal('eval-head-volume-input', this.getVal('eval-head-volume'))}</td>
+              <td class="text-center font-bold"><div>(Tối đa 20)</div>${document.getElementById('eval-avg-volume')?.innerText || 0}</td>
+              <td>${document.getElementById('eval-note-1')?.value || ''}</td>
+            </tr>
+            <tr>
+              <td class="text-center font-bold">2</td>
+              <td><strong>Chất lượng công việc</strong> (Chất lượng, kết quả, sự chính xác...trong thực hiện công việc)</td>
+              <td class="text-center font-bold"><div>(Tối đa 20)</div>${this.getVal('eval-input-quality', this.getVal('eval-input-quality-text'))}</td>
+              <td class="text-center"><div>(Tối đa 20)</div>${this.getVal('eval-mgr-quality-input', this.getVal('eval-mgr-quality'))}</td>
+              <td class="text-center"><div>(Tối đa 20)</div>${this.getVal('eval-deputy-quality-input', this.getVal('eval-deputy-quality'))}</td>
+              <td class="text-center"><div>(Tối đa 20)</div>${this.getVal('eval-head-quality-input', this.getVal('eval-head-quality'))}</td>
+              <td class="text-center font-bold"><div>(Tối đa 20)</div>${document.getElementById('eval-avg-quality')?.innerText || 0}</td>
+              <td>${document.getElementById('eval-note-2')?.value || ''}</td>
+            </tr>
+            <tr>
+              <td class="text-center font-bold">3</td>
+              <td><strong>Tiến độ thực hiện công việc</strong> (Tiến độ thực hiện công việc theo thời hạn được phân công)</td>
+              <td class="text-center font-bold"><div>(Tối đa 20)</div>${this.getVal('eval-input-progress', this.getVal('eval-input-progress-text'))}</td>
+              <td class="text-center"><div>(Tối đa 20)</div>${this.getVal('eval-mgr-progress-input', this.getVal('eval-mgr-progress'))}</td>
+              <td class="text-center"><div>(Tối đa 20)</div>${this.getVal('eval-deputy-progress-input', this.getVal('eval-deputy-progress'))}</td>
+              <td class="text-center"><div>(Tối đa 20)</div>${this.getVal('eval-head-progress-input', this.getVal('eval-head-progress'))}</td>
+              <td class="text-center font-bold"><div>(Tối đa 20)</div>${document.getElementById('eval-avg-progress')?.innerText || 0}</td>
+              <td>${document.getElementById('eval-note-3')?.value || ''}</td>
+            </tr>
+            <tr>
+              <td class="text-center font-bold">4</td>
+              <td><strong>Năng lực, thái độ thực hiện</strong> (Khả năng tham mưu lãnh đạo; Khả năng xây dựng cơ chế, quy chế...; Khả năng xử lý tình huống; Ý thức làm việc; Phối hợp công tác...)</td>
+              <td class="text-center font-bold"><div>(Tối đa 20)</div>${this.getVal('eval-input-attitude', this.getVal('eval-input-attitude-text'))}</td>
+              <td class="text-center"><div>(Tối đa 20)</div>${this.getVal('eval-mgr-attitude-input', this.getVal('eval-mgr-attitude'))}</td>
+              <td class="text-center"><div>(Tối đa 20)</div>${this.getVal('eval-deputy-attitude-input', this.getVal('eval-deputy-attitude'))}</td>
+              <td class="text-center"><div>(Tối đa 20)</div>${this.getVal('eval-head-attitude-input', this.getVal('eval-head-attitude'))}</td>
+              <td class="text-center font-bold"><div>(Tối đa 20)</div>${document.getElementById('eval-avg-attitude')?.innerText || 0}</td>
+              <td>${document.getElementById('eval-note-4')?.value || ''}</td>
+            </tr>
+            <tr>
+              <td class="text-center font-bold">II</td>
+              <td><strong>Ý thức chấp hành kỷ luật, nội quy lao động</strong></td>
+              <td class="text-center font-bold"><div>(Tối đa 10)</div>${this.getVal('eval-input-discipline', this.getVal('eval-input-discipline-text'))}</td>
+              <td class="text-center"><div>(Tối đa 10)</div>${this.getVal('eval-mgr-discipline-input', this.getVal('eval-mgr-discipline'))}</td>
+              <td class="text-center"><div>(Tối đa 10)</div>${this.getVal('eval-deputy-discipline-input', this.getVal('eval-deputy-discipline'))}</td>
+              <td class="text-center"><div>(Tối đa 10)</div>${this.getVal('eval-head-discipline-input', this.getVal('eval-head-discipline'))}</td>
+              <td class="text-center font-bold"><div>(Tối đa 10)</div>${document.getElementById('eval-avg-discipline')?.innerText || 0}</td>
+              <td>${document.getElementById('eval-note-5')?.value || ''}</td>
+            </tr>
+            <tr>
+              <td class="text-center font-bold">III</td>
+              <td><strong>Kết quả kiểm tra nghiệp vụ</strong></td>
+              <td class="text-center font-bold"><div>(Tối đa 10)</div>${this.getVal('eval-input-test', this.getVal('eval-input-test-text'))}</td>
+              <td class="text-center"><div>(Tối đa 10)</div>${this.getVal('eval-mgr-test-input', this.getVal('eval-mgr-test'))}</td>
+              <td class="text-center"><div>(Tối đa 10)</div>${this.getVal('eval-deputy-test-input', this.getVal('eval-deputy-test'))}</td>
+              <td class="text-center"><div>(Tối đa 10)</div>${this.getVal('eval-head-test-input', this.getVal('eval-head-test'))}</td>
+              <td class="text-center font-bold"><div>(Tối đa 10)</div>${document.getElementById('eval-avg-test')?.innerText || 0}</td>
+              <td>${document.getElementById('eval-note-6')?.value || ''}</td>
+            </tr>
+            <tr style="background-color: #f2f2f2; font-weight: bold;">
+              <td></td>
+              <td><strong>Tổng điểm:</strong> (${document.getElementById('eval-badge-rating')?.innerText || ''})</td>
+              <td class="text-center" style="font-size: 12pt;"><strong>${document.getElementById('eval-score-total')?.innerText || 0}</strong></td>
+              <td class="text-center" style="font-size: 12pt;"><strong>${document.getElementById('eval-mgr-total')?.innerText || 0}</strong></td>
+              <td class="text-center"><strong>${document.getElementById('eval-deputy-total')?.innerText || 0}</strong></td>
+              <td class="text-center"><strong>${document.getElementById('eval-head-total')?.innerText || 0}</strong></td>
+              <td class="text-center" style="font-size: 13pt; color: #005a36;"><strong>${document.getElementById('eval-avg-total')?.innerText || 0}</strong></td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+
+        ${(document.getElementById('eval-input-notes')?.value) ? `
+          <div style="margin-top: 15px; font-size: 11pt;">
+            <strong>Ý kiến / Nhận xét:</strong> ${document.getElementById('eval-input-notes').value}
+          </div>
+        ` : ''}
+
+        <table class="signatures">
+          <tr>
+            <td>
+              <strong>NGƯỜI TỰ ĐÁNH GIÁ</strong><br>
+              <em>(Ký, ghi rõ họ tên)</em>
+              <div style="height: 60px;"></div>
+              <strong>${document.getElementById('eval-info-name')?.innerText || ''}</strong>
+            </td>
+            <td>
+              <strong>LÃNH ĐẠO PHÒNG</strong><br>
+              <em>(Ký, ghi rõ họ tên)</em>
+              <div style="height: 60px;"></div>
+              <strong>${document.getElementById('eval-sign-mgr')?.innerText || ''}</strong>
+            </td>
+            <td>
+              <strong>TRƯỞNG ĐƠN VỊ</strong><br>
+              <em>(Ký, ghi rõ họ tên)</em>
+              <div style="height: 60px;"></div>
+              <strong>${document.getElementById('eval-sign-head')?.innerText || ''}</strong>
+            </td>
+          </tr>
+        </table>
+
+        <div class="no-print" style="margin-top: 30px; text-align: center;">
+          <button onclick="window.print()" style="padding: 10px 20px; font-weight: bold; background: #005a36; color: #fff; border: none; border-radius: 8px; cursor: pointer;">
+            🖨️ In ra máy in / Lưu PDF
+          </button>
+        </div>
+      </body>
+      </html>
+    `);
+    win.document.close();
+    setTimeout(() => {
+      win.focus();
+    }, 250);
   }
 };

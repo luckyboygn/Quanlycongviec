@@ -16,6 +16,7 @@ router.use('/admin', require('./admin.routes'));
 router.use('/notifications', require('./notifications.routes'));
 router.use('/upload', require('./upload.routes'));
 router.use('/news', require('./news.routes'));
+router.use('/evaluations', require('./evaluation.routes'));
 
 // Activity logs / Audit logs endpoint
 router.get('/activity-logs', authenticateToken, requireRole('admin'), AdminController.getActivityLogs);

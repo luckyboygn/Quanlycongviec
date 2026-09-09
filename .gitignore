@@ -7,3 +7,5 @@ database.sqlite
 database.sqlite-journal
 uploads/*
 !uploads/.gitkeep
+backups/
+scratch/
