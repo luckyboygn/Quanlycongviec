@@ -158,8 +158,16 @@ const EvaluationRepository = {
           head_score_volume, head_score_quality, head_score_progress, head_score_attitude, head_score_discipline, head_score_test, head_score_total,
           avg_score_total, notes, mgr_notes, deputy_notes, head_notes,
           approver_mgr_id, approver_director_id, submitted_at, manager_approved_at, director_approved_at,
-          submission_note, reject_reason, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (
+          ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?, ?, ?,
+          ?, ?, ?
+        )
       `, [
         data.user_id, data.month, data.year, data.period_name || null,
         data.score_volume || 0, data.score_quality || 0, data.score_progress || 0, data.score_attitude || 0, data.score_discipline || 0, data.score_test || 0, data.score_total || 0,

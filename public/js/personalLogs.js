@@ -2628,11 +2628,8 @@ const PersonalLogs = {
                     <!-- Total Row -->
                     <tr class="bg-blue-50/80 font-bold text-xs">
                       <td class="border border-slate-400 p-2 text-center"></td>
-                      <td class="border border-slate-400 p-2.5 font-extrabold text-sm text-slate-900 flex items-center justify-between">
+                      <td class="border border-slate-400 p-2.5 font-extrabold text-sm text-slate-900">
                         <span>Tổng điểm:</span>
-                        <span id="eval-badge-rating" class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                          Loại A (Xuất sắc)
-                        </span>
                       </td>
                       
                       <!-- Total Col 1 -->
@@ -3293,106 +3290,6 @@ const PersonalLogs = {
     if (avgTotalEl) avgTotalEl.innerText = avgTotal;
     const footerAvgTotal = document.getElementById('eval-footer-avg-total');
     if (footerAvgTotal) footerAvgTotal.innerText = avgTotal;
-
-    // Benchmark Rating against standard
-    const evalBenchmark = avgTotal > 0 ? avgTotal : selfTotal;
-    const ratingBadge = document.getElementById('eval-badge-rating');
-    if (ratingBadge) {
-      if (evalBenchmark >= 90) {
-        ratingBadge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300';
-        ratingBadge.innerText = '🏆 Loại A (Xuất sắc)';
-      } else if (evalBenchmark >= 80) {
-        ratingBadge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-300';
-        ratingBadge.innerText = '⭐ Loại B (Hoàn thành Tốt)';
-      } else if (evalBenchmark >= 70) {
-        ratingBadge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300';
-        ratingBadge.innerText = '✅ Loại C (Hoàn thành)';
-      } else {
-        ratingBadge.className = 'text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300';
-        ratingBadge.innerText = '⚠️ Loại D (Chưa hoàn thành)';
-      }
-    }
-  },
-
-  async saveSelfEvaluation(month, year, targetUserId) {
-    const saveBtn = document.getElementById('btn-save-eval');
-    if (saveBtn) {
-      saveBtn.disabled = true;
-      saveBtn.innerHTML = '<i class="ph ph-spinner animate-spin text-base"></i> Đang lưu...';
-    }
-
-    try {
-      const userCol = this.getUserEvaluationColumn(Auth.user);
-
-      const payload = {
-        user_id: targetUserId,
-        month,
-        year,
-        period_name: `Kỳ tạm ứng thù lao theo hiệu quả công việc V2 tháng ${month} năm ${year}`
-      };
-
-      // 1. NHÂN VIÊN / CHUYÊN VIÊN -> KÊ CỘT 1 (NLĐ)
-      if (userCol === 'staff') {
-        payload.score_volume = Math.min(20, Math.max(0, this.getVal('eval-input-volume', this.getVal('eval-input-volume-text'))));
-        payload.score_quality = Math.min(20, Math.max(0, this.getVal('eval-input-quality', this.getVal('eval-input-quality-text'))));
-        payload.score_progress = Math.min(20, Math.max(0, this.getVal('eval-input-progress', this.getVal('eval-input-progress-text'))));
-        payload.score_attitude = Math.min(20, Math.max(0, this.getVal('eval-input-attitude', this.getVal('eval-input-attitude-text'))));
-        payload.score_discipline = Math.min(10, Math.max(0, this.getVal('eval-input-discipline', this.getVal('eval-input-discipline-text'))));
-        payload.score_test = Math.min(10, Math.max(0, this.getVal('eval-input-test', this.getVal('eval-input-test-text'))));
-        payload.notes = (document.getElementById('eval-input-notes')?.value || '').trim();
-      } 
-      // 2. LÃNH ĐẠO PHÒNG (Trưởng phòng, Phó phòng) -> KÊ CỘT 2
-      else if (userCol === 'manager') {
-        payload.mgr_score_volume = Math.min(20, Math.max(0, this.getVal('eval-mgr-volume-input', this.getVal('eval-mgr-volume'))));
-        payload.mgr_score_quality = Math.min(20, Math.max(0, this.getVal('eval-mgr-quality-input', this.getVal('eval-mgr-quality'))));
-        payload.mgr_score_progress = Math.min(20, Math.max(0, this.getVal('eval-mgr-progress-input', this.getVal('eval-mgr-progress'))));
-        payload.mgr_score_attitude = Math.min(20, Math.max(0, this.getVal('eval-mgr-attitude-input', this.getVal('eval-mgr-attitude'))));
-        payload.mgr_score_discipline = Math.min(10, Math.max(0, this.getVal('eval-mgr-discipline-input', this.getVal('eval-mgr-discipline'))));
-        payload.mgr_score_test = Math.min(10, Math.max(0, this.getVal('eval-mgr-test-input', this.getVal('eval-mgr-test'))));
-        payload.mgr_notes = (document.getElementById('eval-input-notes')?.value || '').trim();
-      } 
-      // 3. PHÓ TRƯỞNG ĐƠN VỊ (Phó Giám đốc) -> KÊ CỘT 3
-      else if (userCol === 'deputy') {
-        payload.deputy_score_volume = Math.min(20, Math.max(0, this.getVal('eval-deputy-volume-input', this.getVal('eval-deputy-volume'))));
-        payload.deputy_score_quality = Math.min(20, Math.max(0, this.getVal('eval-deputy-quality-input', this.getVal('eval-deputy-quality'))));
-        payload.deputy_score_progress = Math.min(20, Math.max(0, this.getVal('eval-deputy-progress-input', this.getVal('eval-deputy-progress'))));
-        payload.deputy_score_attitude = Math.min(20, Math.max(0, this.getVal('eval-deputy-attitude-input', this.getVal('eval-deputy-attitude'))));
-        payload.deputy_score_discipline = Math.min(10, Math.max(0, this.getVal('eval-deputy-discipline-input', this.getVal('eval-deputy-discipline'))));
-        payload.deputy_score_test = Math.min(10, Math.max(0, this.getVal('eval-deputy-test-input', this.getVal('eval-deputy-test'))));
-        payload.deputy_notes = (document.getElementById('eval-input-notes')?.value || '').trim();
-      } 
-      // 4. TRƯỞNG ĐƠN VỊ (Giám đốc, Admin) -> KÊ CỘT 4
-      else if (userCol === 'head') {
-        payload.head_score_volume = Math.min(20, Math.max(0, this.getVal('eval-head-volume-input', this.getVal('eval-head-volume'))));
-        payload.head_score_quality = Math.min(20, Math.max(0, this.getVal('eval-head-quality-input', this.getVal('eval-head-quality'))));
-        payload.head_score_progress = Math.min(20, Math.max(0, this.getVal('eval-head-progress-input', this.getVal('eval-head-progress'))));
-        payload.head_score_attitude = Math.min(20, Math.max(0, this.getVal('eval-head-attitude-input', this.getVal('eval-head-attitude'))));
-        payload.head_score_discipline = Math.min(10, Math.max(0, this.getVal('eval-head-discipline-input', this.getVal('eval-head-discipline'))));
-        payload.head_score_test = Math.min(10, Math.max(0, this.getVal('eval-head-test-input', this.getVal('eval-head-test'))));
-        payload.head_notes = (document.getElementById('eval-input-notes')?.value || '').trim();
-      }
-
-      const res = await apiFetch('/api/evaluations/my', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-
-      if (window.showToast) {
-        showToast('success', `Đã lưu phiếu đánh giá tháng ${month}/${year} thành công!`);
-      } else {
-        alert(`✅ Đã lưu phiếu đánh giá tháng ${month}/${year} thành công!`);
-      }
-
-      App.closeModal();
-    } catch (err) {
-      console.error(err);
-      alert('Lỗi lưu phiếu đánh giá: ' + err.message);
-    } finally {
-      if (saveBtn) {
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = '<i class="ph-bold ph-floppy-disk text-base"></i> Lưu phiếu đánh giá';
-      }
-    }
   },
 
   printSelfEvaluation() {
