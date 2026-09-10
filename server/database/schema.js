@@ -323,6 +323,14 @@ async function initDB() {
   await safeAddColumn('evaluations', 'deputy_notes', 'TEXT');
   await safeAddColumn('evaluations', 'head_notes', 'TEXT');
 
+  await safeAddColumn('evaluations', 'approver_mgr_id', 'INTEGER');
+  await safeAddColumn('evaluations', 'approver_director_id', 'INTEGER');
+  await safeAddColumn('evaluations', 'submitted_at', 'DATETIME');
+  await safeAddColumn('evaluations', 'manager_approved_at', 'DATETIME');
+  await safeAddColumn('evaluations', 'director_approved_at', 'DATETIME');
+  await safeAddColumn('evaluations', 'submission_note', 'TEXT');
+  await safeAddColumn('evaluations', 'reject_reason', 'TEXT');
+
   // AUTO SEED IF EMPTY
   try {
     const userCount = await db.getAsync('SELECT COUNT(*) as count FROM users');

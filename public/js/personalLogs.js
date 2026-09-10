@@ -1978,6 +1978,18 @@ const PersonalLogs = {
     this.recalcEvalScores();
   },
 
+  formatEvalDateTime(dateStr) {
+    if (!dateStr) return '';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return dateStr;
+      const pad = n => String(n).padStart(2, '0');
+      return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch (e) {
+      return dateStr;
+    }
+  },
+
   async openSelfEvaluationModal(selectedMonth = null, selectedYear = null, selectedUserId = null) {
     const modalContainer = document.getElementById('modal-container');
     if (!modalContainer) return;
@@ -2000,10 +2012,10 @@ const PersonalLogs = {
     
     // Phân quyền chấm điểm trực tiếp theo vị trí chức vụ của người dùng đang thao tác:
     const userCol = this.getUserEvaluationColumn(Auth.user);
-    const canEditSelfCol = (userCol === 'staff');      // Nhân viên / Chuyên viên -> Cột 1
-    const canEditMgrCol = (userCol === 'manager');     // Lãnh đạo phòng (Phó phòng, Trưởng phòng) -> Cột 2
-    const canEditDeputyCol = (userCol === 'deputy');   // Phó trưởng đơn vị (Phó Giám đốc) -> Cột 3
-    const canEditHeadCol = (userCol === 'head');       // Trưởng đơn vị (Giám đốc, Admin) -> Cột 4
+    const canEditSelfCol = (userCol === 'staff') || isSelf;      // Cột 1
+    const canEditMgrCol = (userCol === 'manager') || Auth.isManager() || Auth.isAdmin() || Auth.isDirector(); // Cột 2
+    const canEditDeputyCol = (userCol === 'deputy') || Auth.isAdmin() || Auth.isDirector();   // Cột 3
+    const canEditHeadCol = (userCol === 'head') || Auth.isAdmin() || Auth.isDirector();       // Cột 4
 
     const isStaff = Auth.isStaff();
     const isManager = Auth.isManager();
@@ -2049,7 +2061,7 @@ const PersonalLogs = {
                   <span class="text-[11px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">MẪU 01A</span>
                 </h3>
                 <p class="text-xs text-slate-500 dark:text-slate-400">
-                  ${isSelf ? 'Cá nhân tự chấm điểm kết quả công tác trong kỳ' : 'Lãnh đạo thẩm định & chấm điểm cho cán bộ'}
+                  ${isSelf ? 'Cá nhân tự chấm điểm & chọn luồng chuyển Lãnh đạo phòng, Ban Giám đốc duyệt' : 'Thẩm định & phê duyệt mức độ hoàn thành công việc theo phân quyền'}
                 </p>
               </div>
             </div>
@@ -2081,7 +2093,97 @@ const PersonalLogs = {
           </div>
 
           <!-- Printable Document Container -->
-          <div id="eval-modal-content" class="hidden flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100/60 dark:bg-slate-900/60 custom-scrollbar">
+          <div id="eval-modal-content" class="hidden flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100/60 dark:bg-slate-900/60 custom-scrollbar space-y-4">
+            
+            <!-- Approval Workflow Status & Stepper Banner -->
+            <div id="eval-workflow-banner" class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm space-y-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Tiến trình phê duyệt:</span>
+                  <div id="eval-status-badge">
+                    <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-300">Đang tải...</span>
+                  </div>
+                </div>
+                <div id="eval-reject-box" class="hidden text-xs text-rose-700 font-medium bg-rose-50 border border-rose-200 px-3 py-1 rounded-xl"></div>
+              </div>
+
+              <!-- Visual Stepper -->
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-2 pt-2 border-t border-slate-100 dark:border-slate-700/60 text-xs">
+                <!-- Step 1 -->
+                <div id="step-node-1" class="p-2.5 rounded-xl border flex items-center gap-2 transition bg-slate-50 border-slate-200 text-slate-600">
+                  <div class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[11px] shrink-0">1</div>
+                  <div class="min-w-0">
+                    <div class="font-bold truncate">Tự kê khai</div>
+                    <div id="step-time-1" class="text-[10px] text-slate-500 truncate">Chưa gửi</div>
+                  </div>
+                </div>
+                <!-- Step 2 -->
+                <div id="step-node-2" class="p-2.5 rounded-xl border flex items-center gap-2 transition bg-slate-50 border-slate-200 text-slate-600">
+                  <div class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[11px] shrink-0">2</div>
+                  <div class="min-w-0">
+                    <div class="font-bold truncate" id="step-title-2">Lãnh đạo phòng</div>
+                    <div id="step-time-2" class="text-[10px] text-slate-500 truncate">Chờ duyệt</div>
+                  </div>
+                </div>
+                <!-- Step 3 -->
+                <div id="step-node-3" class="p-2.5 rounded-xl border flex items-center gap-2 transition bg-slate-50 border-slate-200 text-slate-600">
+                  <div class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[11px] shrink-0">3</div>
+                  <div class="min-w-0">
+                    <div class="font-bold truncate" id="step-title-3">Ban Giám đốc</div>
+                    <div id="step-time-3" class="text-[10px] text-slate-500 truncate">Chờ duyệt</div>
+                  </div>
+                </div>
+                <!-- Step 4 -->
+                <div id="step-node-4" class="p-2.5 rounded-xl border flex items-center gap-2 transition bg-slate-50 border-slate-200 text-slate-600">
+                  <div class="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[11px] shrink-0">4</div>
+                  <div class="min-w-0">
+                    <div class="font-bold truncate">Hoàn tất</div>
+                    <div id="step-time-4" class="text-[10px] text-slate-500 truncate">Chưa đạt</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Custom Routing Selector Card -->
+            <div id="eval-routing-card" class="bg-gradient-to-r from-blue-50/70 via-indigo-50/60 to-purple-50/70 dark:from-slate-800 dark:to-slate-800 p-4 sm:p-5 rounded-2xl border border-blue-200/80 dark:border-slate-700 shadow-sm space-y-3">
+              <div class="flex items-center gap-2">
+                <i class="ph-bold ph-git-fork text-blue-600 dark:text-blue-400 text-lg"></i>
+                <h4 class="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-white uppercase tracking-wide">
+                  Thiết lập luồng chuyển duyệt phiếu đánh giá
+                </h4>
+                <span class="text-[11px] text-slate-500 italic hidden sm:inline">(Người dùng tự chọn người duyệt cụ thể ở từng cấp)</span>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                <!-- Dept Leader Approver Selection -->
+                <div class="bg-white dark:bg-slate-700/80 p-3 rounded-xl border border-blue-200 dark:border-slate-600 shadow-xs">
+                  <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1.5">
+                    <span class="w-4 h-4 rounded-full bg-amber-500 text-white flex items-center justify-center text-[10px] font-black">1</span>
+                    Lãnh đạo phòng thẩm định (Phó phòng / Trưởng phòng):
+                  </label>
+                  <select id="eval-approver-mgr" class="w-full bg-slate-50 dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-white p-2 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer">
+                    <option value="">-- Đang tải danh sách lãnh đạo phòng... --</option>
+                  </select>
+                </div>
+
+                <!-- Board of Directors Approver Selection -->
+                <div class="bg-white dark:bg-slate-700/80 p-3 rounded-xl border border-blue-200 dark:border-slate-600 shadow-xs">
+                  <label class="block text-[11px] font-bold text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1.5">
+                    <span class="w-4 h-4 rounded-full bg-purple-600 text-white flex items-center justify-center text-[10px] font-black">2</span>
+                    Ban Giám đốc phê duyệt (Phó Giám đốc / Giám đốc):
+                  </label>
+                  <select id="eval-approver-director" class="w-full bg-slate-50 dark:bg-slate-800 text-xs font-bold text-slate-800 dark:text-white p-2 rounded-lg border border-slate-300 dark:border-slate-600 focus:ring-2 focus:ring-blue-500 focus:outline-none cursor-pointer">
+                    <option value="">-- Đang tải danh sách Ban Giám đốc... --</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Submission Note -->
+              <div>
+                <input type="text" id="eval-submission-note" placeholder="Ý kiến / Ghi chú gửi kèm khi chuyển duyệt phiếu (tuỳ chọn)..." class="w-full px-3 py-2 bg-white dark:bg-slate-700/80 border border-slate-300 dark:border-slate-600 rounded-xl text-xs text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-500 focus:outline-none shadow-xs">
+              </div>
+            </div>
+
             <!-- Document Paper Sheet -->
             <div id="printable-eval-form" class="bg-white text-slate-900 p-6 sm:p-10 rounded-2xl shadow-lg max-w-4xl mx-auto border border-slate-200 font-sans text-xs sm:text-sm leading-normal">
               
@@ -2324,7 +2426,7 @@ const PersonalLogs = {
                         ${canEditDeputyCol ? `
                           <input type="number" id="eval-deputy-progress-input" min="0" max="20" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-purple-400 rounded text-purple-900 focus:ring-2 focus:ring-purple-500 shadow-inner" placeholder="0">
                         ` : `
-                          <span id="eval-deputy-progress" class="font-bold text-sm text-slate-700">0</span>
+                          <span id="eval-deputy-volume" class="font-bold text-sm text-slate-700">0</span>
                         `}
                       </td>
 
@@ -2496,7 +2598,7 @@ const PersonalLogs = {
                       <td class="border border-slate-400 p-1.5 text-center ${canEditDeputyCol ? 'bg-purple-50/40' : 'bg-slate-50/50'}">
                         <div class="text-[10px] text-slate-400 mb-0.5">(Tối đa 10)</div>
                         ${canEditDeputyCol ? `
-                          <input type="number" id="eval-deputy-test-input" min="0" max="10" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 10)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-purple-400 rounded text-purple-900 focus:ring-2 focus:ring-purple-500 shadow-inner" placeholder="0">
+                          <input type="number" id="eval-deputy-test-input" min="0" max="10" step="0.5" oninput="PersonalLogs.validateAndClamp(this, 20)" class="w-16 mx-auto px-1.5 py-1 text-center font-bold text-sm bg-white border border-purple-400 rounded text-purple-900 focus:ring-2 focus:ring-purple-500 shadow-inner" placeholder="0">
                         ` : `
                           <span id="eval-deputy-test" class="font-bold text-sm text-slate-700">0</span>
                         `}
@@ -2586,16 +2688,16 @@ const PersonalLogs = {
                   <div class="italic text-[11px] text-slate-500">(Ký, ghi rõ họ tên)</div>
                   <div class="h-16 flex items-end justify-center">
                     <span id="eval-sign-mgr" class="font-semibold text-xs text-slate-600">
-                      ${isManager ? Auth.user.full_name : '<span class="text-slate-400 italic">(Chưa ký)</span>'}
+                      <span class="text-slate-400 italic">(Chưa duyệt)</span>
                     </span>
                   </div>
                 </div>
                 <div>
-                  <div class="font-bold uppercase text-xs text-slate-800">TRƯỞNG ĐƠN VỊ</div>
+                  <div class="font-bold uppercase text-xs text-slate-800">BAN GIÁM ĐỐC</div>
                   <div class="italic text-[11px] text-slate-500">(Ký, ghi rõ họ tên)</div>
                   <div class="h-16 flex items-end justify-center">
                     <span id="eval-sign-head" class="font-semibold text-xs text-slate-600">
-                      ${isDirector ? Auth.user.full_name : '<span class="text-slate-400 italic">(Chưa ký)</span>'}
+                      <span class="text-slate-400 italic">(Chưa duyệt)</span>
                     </span>
                   </div>
                 </div>
@@ -2615,12 +2717,15 @@ const PersonalLogs = {
                 Điểm bình quân: <strong id="eval-footer-avg-total" class="text-emerald-600 dark:text-emerald-400 font-black text-sm">0</strong> / 100
               </span>
             </div>
-            <div class="flex items-center gap-2.5">
+            <div id="eval-footer-actions-container" class="flex flex-wrap items-center gap-2">
               <button onclick="App.closeModal()" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition">
                 Đóng
               </button>
-              <button onclick="PersonalLogs.saveSelfEvaluation(${month}, ${year}, ${targetUserId})" id="btn-save-eval" class="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 transition">
-                <i class="ph-bold ph-floppy-disk text-base"></i> Lưu phiếu đánh giá
+              <button onclick="PersonalLogs.saveSelfEvaluation(${month}, ${year}, ${targetUserId}, 'save')" id="btn-save-eval" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold rounded-xl text-xs flex items-center gap-1.5 transition">
+                <i class="ph-bold ph-floppy-disk text-base"></i> Lưu bản nháp
+              </button>
+              <button onclick="PersonalLogs.saveSelfEvaluation(${month}, ${year}, ${targetUserId}, 'submit')" id="btn-submit-eval" class="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition">
+                <i class="ph-bold ph-paper-plane-tilt text-base"></i> Chuyển duyệt phiếu
               </button>
             </div>
           </div>
@@ -2629,10 +2734,16 @@ const PersonalLogs = {
       </div>
     `;
 
-    // Fetch and populate evaluation data
+    // Fetch and populate evaluation data & approvers
     try {
-      const data = await apiFetch(`/api/evaluations/my?month=${month}&year=${year}&user_id=${targetUserId}`);
+      const [evalRes, approversRes] = await Promise.all([
+        apiFetch(`/api/evaluations/my?month=${month}&year=${year}&user_id=${targetUserId}`),
+        apiFetch(`/api/evaluations/approvers?user_id=${targetUserId}`)
+      ]);
       
+      const data = evalRes;
+      const approvers = approversRes || { departmentLeaders: [], boardOfDirectors: [] };
+
       const loadingEl = document.getElementById('eval-modal-loading');
       const contentEl = document.getElementById('eval-modal-content');
       if (loadingEl) loadingEl.classList.add('hidden');
@@ -2653,11 +2764,80 @@ const PersonalLogs = {
       const infoDept = document.getElementById('eval-info-dept');
       if (infoDept) infoDept.innerText = rawDeptName;
 
+      // Populate Approvers Dropdowns
+      const mgrSelect = document.getElementById('eval-approver-mgr');
+      if (mgrSelect) {
+        if (approvers.departmentLeaders && approvers.departmentLeaders.length > 0) {
+          mgrSelect.innerHTML = `
+            <option value="">-- Chọn lãnh đạo phòng duyệt --</option>
+            ${approvers.departmentLeaders.map(u => `
+              <option value="${u.id}" ${u.id == data.approver_mgr_id ? 'selected' : ''}>👤 ${u.full_name} (${this.formatUserPosition(u.position, u.role)})</option>
+            `).join('')}
+          `;
+          // If none pre-selected and current user is not manager, auto-pick first
+          if (!data.approver_mgr_id && approvers.departmentLeaders.length > 0) {
+            mgrSelect.value = approvers.departmentLeaders[0].id;
+          }
+        } else {
+          mgrSelect.innerHTML = `<option value="">(Không có lãnh đạo phòng khả dụng)</option>`;
+        }
+      }
+
+      const dirSelect = document.getElementById('eval-approver-director');
+      if (dirSelect) {
+        if (approvers.boardOfDirectors && approvers.boardOfDirectors.length > 0) {
+          dirSelect.innerHTML = `
+            <option value="">-- Chọn lãnh đạo Ban Giám đốc duyệt --</option>
+            ${approvers.boardOfDirectors.map(u => `
+              <option value="${u.id}" ${u.id == data.approver_director_id ? 'selected' : ''}>🏛️ ${u.full_name} (${this.formatUserPosition(u.position, u.role)})</option>
+            `).join('')}
+          `;
+          // If none pre-selected, auto-pick first
+          if (!data.approver_director_id && approvers.boardOfDirectors.length > 0) {
+            dirSelect.value = approvers.boardOfDirectors[0].id;
+          }
+        } else {
+          dirSelect.innerHTML = `<option value="">(Không có lãnh đạo BGĐ khả dụng)</option>`;
+        }
+      }
+
+      if (document.getElementById('eval-submission-note')) {
+        document.getElementById('eval-submission-note').value = data.submission_note || '';
+      }
+
+      // Render Status Badge & Stepper
+      this.renderEvalWorkflowState(data, isSelf);
+
+      // Signatures
       const signUser = document.getElementById('eval-sign-user');
-      if (signUser) signUser.innerText = data.full_name || '--';
+      if (signUser) {
+        signUser.innerHTML = `${data.full_name || '--'} ${data.submitted_at ? `<div class="text-[10px] text-slate-500 font-normal mt-0.5">(${this.formatEvalDateTime(data.submitted_at)})</div>` : ''}`;
+      }
+
+      const signMgr = document.getElementById('eval-sign-mgr');
+      if (signMgr) {
+        if (data.manager_approved_at) {
+          signMgr.innerHTML = `<span class="font-bold text-amber-900">${data.approver_mgr_name || 'Lãnh đạo phòng'}</span><div class="text-[10px] text-emerald-600 font-bold mt-0.5">✅ Đã duyệt ${this.formatEvalDateTime(data.manager_approved_at)}</div>`;
+        } else if (data.approver_mgr_name) {
+          signMgr.innerHTML = `<span class="text-slate-600 font-medium">${data.approver_mgr_name}</span><div class="text-[10px] text-amber-600 italic mt-0.5">(Đang chờ duyệt)</div>`;
+        } else {
+          signMgr.innerHTML = `<span class="text-slate-400 italic">(Chưa duyệt)</span>`;
+        }
+      }
+
+      const signHead = document.getElementById('eval-sign-head');
+      if (signHead) {
+        if (data.director_approved_at) {
+          signHead.innerHTML = `<span class="font-bold text-emerald-900">${data.approver_director_name || 'Ban Giám đốc'}</span><div class="text-[10px] text-emerald-600 font-bold mt-0.5">✅ Đã phê duyệt ${this.formatEvalDateTime(data.director_approved_at)}</div>`;
+        } else if (data.approver_director_name) {
+          signHead.innerHTML = `<span class="text-slate-600 font-medium">${data.approver_director_name}</span><div class="text-[10px] text-purple-600 italic mt-0.5">(Đang chờ duyệt)</div>`;
+        } else {
+          signHead.innerHTML = `<span class="text-slate-400 italic">(Chưa duyệt)</span>`;
+        }
+      }
 
       // 1. Set NLĐ (Self) score inputs or text displays
-      if (canEditSelfCol) {
+      if (canEditSelfCol && (data.status === 'draft' || data.status === 'rejected' || isSelf)) {
         if (document.getElementById('eval-input-volume')) document.getElementById('eval-input-volume').value = data.score_volume || 0;
         if (document.getElementById('eval-input-quality')) document.getElementById('eval-input-quality').value = data.score_quality || 0;
         if (document.getElementById('eval-input-progress')) document.getElementById('eval-input-progress').value = data.score_progress || 0;
@@ -2674,7 +2854,7 @@ const PersonalLogs = {
       }
 
       // 2. Set LĐ Phòng inputs or text displays
-      if (canEditMgrCol) {
+      if (canEditMgrCol && (data.status === 'pending_manager' || Auth.isManager() || Auth.isAdmin())) {
         if (document.getElementById('eval-mgr-volume-input')) document.getElementById('eval-mgr-volume-input').value = data.mgr_score_volume !== null && data.mgr_score_volume !== undefined ? data.mgr_score_volume : (data.score_volume || 0);
         if (document.getElementById('eval-mgr-quality-input')) document.getElementById('eval-mgr-quality-input').value = data.mgr_score_quality !== null && data.mgr_score_quality !== undefined ? data.mgr_score_quality : (data.score_quality || 0);
         if (document.getElementById('eval-mgr-progress-input')) document.getElementById('eval-mgr-progress-input').value = data.mgr_score_progress !== null && data.mgr_score_progress !== undefined ? data.mgr_score_progress : (data.score_progress || 0);
@@ -2729,6 +2909,9 @@ const PersonalLogs = {
         document.getElementById('eval-input-notes').value = (isSelf ? data.notes : (data.mgr_notes || data.notes)) || '';
       }
 
+      // Render Dynamic Action Buttons in Footer
+      this.renderEvalFooterButtons(data, isSelf, month, year, targetUserId);
+
       this.recalcEvalScores();
     } catch (err) {
       console.error(err);
@@ -2740,6 +2923,283 @@ const PersonalLogs = {
             <p>Không thể tải phiếu đánh giá: ${err.message}</p>
           </div>
         `;
+      }
+    }
+  },
+
+  renderEvalWorkflowState(data, isSelf) {
+    const status = data.status || 'draft';
+    const statusBadge = document.getElementById('eval-status-badge');
+    const rejectBox = document.getElementById('eval-reject-box');
+
+    // Stepper nodes
+    const node1 = document.getElementById('step-node-1');
+    const node2 = document.getElementById('step-node-2');
+    const node3 = document.getElementById('step-node-3');
+    const node4 = document.getElementById('step-node-4');
+
+    const time1 = document.getElementById('step-time-1');
+    const time2 = document.getElementById('step-time-2');
+    const time3 = document.getElementById('step-time-3');
+    const time4 = document.getElementById('step-time-4');
+
+    const title2 = document.getElementById('step-title-2');
+    const title3 = document.getElementById('step-title-3');
+
+    if (title2) title2.innerText = data.approver_mgr_name ? `LĐP: ${data.approver_mgr_name}` : 'Lãnh đạo phòng';
+    if (title3) title3.innerText = data.approver_director_name ? `BGĐ: ${data.approver_director_name}` : 'Ban Giám đốc';
+
+    if (time1) time1.innerText = data.submitted_at ? this.formatEvalDateTime(data.submitted_at) : (status === 'draft' ? 'Đang soạn' : 'Đã kê');
+    if (time2) time2.innerText = data.manager_approved_at ? `Đã duyệt ${this.formatEvalDateTime(data.manager_approved_at)}` : (status === 'pending_manager' ? '⏳ Đang chờ duyệt' : 'Chưa duyệt');
+    if (time3) time3.innerText = data.director_approved_at ? `Đã duyệt ${this.formatEvalDateTime(data.director_approved_at)}` : (status === 'pending_director' ? '⏳ Đang chờ duyệt' : 'Chưa duyệt');
+    if (time4) time4.innerText = status === 'approved' ? '✅ Hoàn tất' : 'Chưa hoàn tất';
+
+    // Status styling
+    if (status === 'draft') {
+      if (statusBadge) statusBadge.innerHTML = `<span class="text-xs font-bold px-3 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-300 flex items-center gap-1.5"><i class="ph-bold ph-pencil-simple"></i> Bản nháp (Chưa gửi duyệt)</span>`;
+      if (node1) node1.className = 'p-2.5 rounded-xl border flex items-center gap-2 transition bg-blue-50 border-blue-300 text-blue-900 font-bold';
+    } else if (status === 'pending_manager') {
+      if (statusBadge) statusBadge.innerHTML = `<span class="text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1.5"><i class="ph-bold ph-clock"></i> Chờ Lãnh đạo phòng duyệt (${data.approver_mgr_name || 'LĐP'})</span>`;
+      if (node1) node1.className = 'p-2.5 rounded-xl border flex items-center gap-2 transition bg-emerald-50 border-emerald-300 text-emerald-900';
+      if (node2) node2.className = 'p-2.5 rounded-xl border flex items-center gap-2 transition bg-amber-50 border-amber-400 text-amber-900 ring-2 ring-amber-400/40 font-bold animate-pulse';
+    } else if (status === 'pending_director') {
+      if (statusBadge) statusBadge.innerHTML = `<span class="text-xs font-bold px-3 py-1 rounded-full bg-purple-100 text-purple-900 border border-purple-300 flex items-center gap-1.5"><i class="ph-bold ph-clock"></i> Chờ Ban Giám đốc phê duyệt (${data.approver_director_name || 'BGĐ'})</span>`;
+      if (node1) node1.className = 'p-2.5 rounded-xl border flex items-center gap-2 transition bg-emerald-50 border-emerald-300 text-emerald-900';
+      if (node2) node2.className = 'p-2.5 rounded-xl border flex items-center gap-2 transition bg-emerald-50 border-emerald-300 text-emerald-900';
+      if (node3) node3.className = 'p-2.5 rounded-xl border flex items-center gap-2 transition bg-purple-50 border-purple-400 text-purple-900 ring-2 ring-purple-400/40 font-bold animate-pulse';
+    } else if (status === 'approved') {
+      if (statusBadge) statusBadge.innerHTML = `<span class="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-400 flex items-center gap-1.5"><i class="ph-bold ph-check-circle text-emerald-600"></i> Đã phê duyệt chính thức</span>`;
+      if (node1) node1.className = 'p-2.5 rounded-xl border flex items-center gap-2 transition bg-emerald-50 border-emerald-300 text-emerald-900';
+      if (node2) node2.className = 'p-2.5 rounded-xl border flex items-center gap-2 transition bg-emerald-50 border-emerald-300 text-emerald-900';
+      if (node3) node3.className = 'p-2.5 rounded-xl border flex items-center gap-2 transition bg-emerald-50 border-emerald-300 text-emerald-900';
+      if (node4) node4.className = 'p-2.5 rounded-xl border flex items-center gap-2 transition bg-emerald-100 border-emerald-400 text-emerald-950 font-black';
+    } else if (status === 'rejected') {
+      if (statusBadge) statusBadge.innerHTML = `<span class="text-xs font-bold px-3 py-1 rounded-full bg-rose-100 text-rose-900 border border-rose-400 flex items-center gap-1.5"><i class="ph-bold ph-warning-circle text-rose-600"></i> Bị trả lại yêu cầu chỉnh sửa</span>`;
+      if (rejectBox) {
+        rejectBox.classList.remove('hidden');
+        rejectBox.innerHTML = `<i class="ph-bold ph-chat-circle-dots mr-1"></i> <strong>Lý do trả lại:</strong> ${data.reject_reason || 'Yêu cầu rà soát chỉnh sửa lại'}`;
+      }
+      if (node1) node1.className = 'p-2.5 rounded-xl border flex items-center gap-2 transition bg-rose-50 border-rose-300 text-rose-900 font-bold';
+    }
+
+    // Disable routing selection if already approved
+    const routingCard = document.getElementById('eval-routing-card');
+    if (routingCard && status === 'approved') {
+      const selects = routingCard.querySelectorAll('select, input');
+      selects.forEach(s => s.disabled = true);
+    }
+  },
+
+  renderEvalFooterButtons(data, isSelf, month, year, targetUserId) {
+    const container = document.getElementById('eval-footer-actions-container');
+    if (!container) return;
+
+    const status = data.status || 'draft';
+    const isManager = Auth.isManager();
+    const isDirector = Auth.isDirector();
+    const isAdmin = Auth.isAdmin();
+
+    let buttonsHtml = `
+      <button onclick="App.closeModal()" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition">
+        Đóng
+      </button>
+    `;
+
+    // 1. CÁN BỘ TỰ ĐÁNH GIÁ (Draft / Rejected)
+    if (isSelf && (status === 'draft' || status === 'rejected')) {
+      buttonsHtml += `
+        <button onclick="PersonalLogs.saveSelfEvaluation(${month}, ${year}, ${targetUserId}, 'save')" id="btn-save-eval" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold rounded-xl text-xs flex items-center gap-1.5 transition">
+          <i class="ph-bold ph-floppy-disk text-base"></i> Lưu bản nháp
+        </button>
+        <button onclick="PersonalLogs.saveSelfEvaluation(${month}, ${year}, ${targetUserId}, 'submit')" id="btn-submit-eval" class="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl text-xs shadow-md shadow-blue-500/20 flex items-center gap-1.5 transition">
+          <i class="ph-bold ph-paper-plane-tilt text-base"></i> Chuyển duyệt phiếu đánh giá
+        </button>
+      `;
+    } 
+    // 2. CÁN BỘ ĐÃ GỬI (Đang chờ Lãnh đạo phòng duyệt) -> Cho phép thu hồi về bản nháp
+    else if (isSelf && status === 'pending_manager') {
+      buttonsHtml += `
+        <button onclick="PersonalLogs.saveSelfEvaluation(${month}, ${year}, ${targetUserId}, 'recall')" id="btn-recall-eval" class="px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold rounded-xl text-xs flex items-center gap-1.5 transition">
+          <i class="ph-bold ph-arrow-u-up-left text-base"></i> Thu hồi về bản nháp
+        </button>
+      `;
+    }
+
+    // 3. LÃNH ĐẠO PHÒNG DUYỆT (Manager / Admin / Direct Reviewer)
+    if ((isManager || isAdmin || Auth.user.id == data.approver_mgr_id) && status === 'pending_manager') {
+      buttonsHtml += `
+        <button onclick="PersonalLogs.rejectSelfEvaluation(${month}, ${year}, ${targetUserId})" id="btn-reject-eval" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold rounded-xl text-xs flex items-center gap-1.5 transition">
+          <i class="ph-bold ph-arrow-counter-clockwise text-base"></i> Trả lại yêu cầu sửa
+        </button>
+        <button onclick="PersonalLogs.saveSelfEvaluation(${month}, ${year}, ${targetUserId}, 'save')" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold rounded-xl text-xs flex items-center gap-1.5 transition">
+          <i class="ph-bold ph-floppy-disk text-base"></i> Lưu điểm chấm
+        </button>
+        <button onclick="PersonalLogs.saveSelfEvaluation(${month}, ${year}, ${targetUserId}, 'approve_manager')" id="btn-approve-mgr-eval" class="px-5 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white font-bold rounded-xl text-xs shadow-md shadow-amber-500/20 flex items-center gap-1.5 transition">
+          <i class="ph-bold ph-fast-forward text-base"></i> Duyệt & Chuyển Ban Giám đốc
+        </button>
+      `;
+    }
+
+    // 4. BAN GIÁM ĐỐC PHÊ DUYỆT (Director / Admin / Direct Reviewer)
+    if ((isDirector || isAdmin || Auth.user.id == data.approver_director_id) && status === 'pending_director') {
+      buttonsHtml += `
+        <button onclick="PersonalLogs.rejectSelfEvaluation(${month}, ${year}, ${targetUserId})" id="btn-reject-eval" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold rounded-xl text-xs flex items-center gap-1.5 transition">
+          <i class="ph-bold ph-arrow-counter-clockwise text-base"></i> Trả lại yêu cầu sửa
+        </button>
+        <button onclick="PersonalLogs.saveSelfEvaluation(${month}, ${year}, ${targetUserId}, 'save')" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-200 font-bold rounded-xl text-xs flex items-center gap-1.5 transition">
+          <i class="ph-bold ph-floppy-disk text-base"></i> Lưu điểm chấm
+        </button>
+        <button onclick="PersonalLogs.saveSelfEvaluation(${month}, ${year}, ${targetUserId}, 'approve_director')" id="btn-approve-dir-eval" class="px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition">
+          <i class="ph-bold ph-seal-check text-base"></i> Phê duyệt chính thức
+        </button>
+      `;
+    }
+
+    // 5. NẾU ĐÃ PHÊ DUYỆT HOÀN TẤT
+    if (status === 'approved') {
+      buttonsHtml += `
+        <span class="px-3.5 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold rounded-xl border border-emerald-200 dark:border-emerald-800 text-xs flex items-center gap-1.5">
+          <i class="ph-bold ph-check-circle text-emerald-600"></i> Đã hoàn tất phê duyệt
+        </span>
+      `;
+    }
+
+    container.innerHTML = buttonsHtml;
+  },
+
+  async rejectSelfEvaluation(month, year, targetUserId) {
+    const reason = prompt('Nhập ý kiến / lý do trả lại phiếu đánh giá yêu cầu cán bộ chỉnh sửa:');
+    if (reason === null) return; // User cancelled
+    if (!reason.trim()) {
+      alert('Vui lòng nhập lý do trả lại để cán bộ biết nội dung cần sửa!');
+      return;
+    }
+
+    await this.saveSelfEvaluation(month, year, targetUserId, 'reject', reason.trim());
+  },
+
+  async saveSelfEvaluation(month, year, targetUserId, action = 'save', rejectReason = null) {
+    const saveBtn = document.getElementById('btn-save-eval') || document.getElementById('btn-submit-eval') || document.getElementById('btn-approve-mgr-eval') || document.getElementById('btn-approve-dir-eval');
+    const originalHtml = saveBtn ? saveBtn.innerHTML : '';
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<i class="ph ph-spinner animate-spin text-base"></i> Đang xử lý...';
+    }
+
+    try {
+      const userCol = this.getUserEvaluationColumn(Auth.user);
+
+      const payload = {
+        user_id: targetUserId,
+        month,
+        year,
+        period_name: `Kỳ tạm ứng thù lao theo hiệu quả công việc V2 tháng ${month} năm ${year}`,
+        action: action
+      };
+
+      // Approvers & Notes
+      const approverMgrSelect = document.getElementById('eval-approver-mgr');
+      if (approverMgrSelect && approverMgrSelect.value) {
+        payload.approver_mgr_id = parseInt(approverMgrSelect.value);
+      }
+      const approverDirSelect = document.getElementById('eval-approver-director');
+      if (approverDirSelect && approverDirSelect.value) {
+        payload.approver_director_id = parseInt(approverDirSelect.value);
+      }
+      const submissionNoteInput = document.getElementById('eval-submission-note');
+      if (submissionNoteInput) {
+        payload.submission_note = submissionNoteInput.value.trim();
+      }
+
+      if (action === 'reject' && rejectReason) {
+        payload.reject_reason = rejectReason;
+      }
+
+      // 1. NHÂN VIÊN / CHUYÊN VIÊN -> KÊ CỘT 1 (NLĐ)
+      if (userCol === 'staff' || Auth.user.id == targetUserId) {
+        payload.score_volume = Math.min(20, Math.max(0, this.getVal('eval-input-volume', this.getVal('eval-input-volume-text'))));
+        payload.score_quality = Math.min(20, Math.max(0, this.getVal('eval-input-quality', this.getVal('eval-input-quality-text'))));
+        payload.score_progress = Math.min(20, Math.max(0, this.getVal('eval-input-progress', this.getVal('eval-input-progress-text'))));
+        payload.score_attitude = Math.min(20, Math.max(0, this.getVal('eval-input-attitude', this.getVal('eval-input-attitude-text'))));
+        payload.score_discipline = Math.min(10, Math.max(0, this.getVal('eval-input-discipline', this.getVal('eval-input-discipline-text'))));
+        payload.score_test = Math.min(10, Math.max(0, this.getVal('eval-input-test', this.getVal('eval-input-test-text'))));
+        payload.notes = (document.getElementById('eval-input-notes')?.value || '').trim();
+      } 
+      
+      // 2. LÃNH ĐẠO PHÒNG (Trưởng phòng, Phó phòng) -> KÊ CỘT 2
+      if (userCol === 'manager' || Auth.isManager() || Auth.isAdmin() || Auth.isDirector()) {
+        payload.mgr_score_volume = Math.min(20, Math.max(0, this.getVal('eval-mgr-volume-input', this.getVal('eval-mgr-volume'))));
+        payload.mgr_score_quality = Math.min(20, Math.max(0, this.getVal('eval-mgr-quality-input', this.getVal('eval-mgr-quality'))));
+        payload.mgr_score_progress = Math.min(20, Math.max(0, this.getVal('eval-mgr-progress-input', this.getVal('eval-mgr-progress'))));
+        payload.mgr_score_attitude = Math.min(20, Math.max(0, this.getVal('eval-mgr-attitude-input', this.getVal('eval-mgr-attitude'))));
+        payload.mgr_score_discipline = Math.min(10, Math.max(0, this.getVal('eval-mgr-discipline-input', this.getVal('eval-mgr-discipline'))));
+        payload.mgr_score_test = Math.min(10, Math.max(0, this.getVal('eval-mgr-test-input', this.getVal('eval-mgr-test'))));
+        payload.mgr_notes = (document.getElementById('eval-input-notes')?.value || '').trim();
+      } 
+      
+      // 3. PHÓ TRƯỞNG ĐƠN VỊ (Phó Giám đốc) -> KÊ CỘT 3
+      if (userCol === 'deputy' || Auth.isAdmin() || Auth.isDirector()) {
+        payload.deputy_score_volume = Math.min(20, Math.max(0, this.getVal('eval-deputy-volume-input', this.getVal('eval-deputy-volume'))));
+        payload.deputy_score_quality = Math.min(20, Math.max(0, this.getVal('eval-deputy-quality-input', this.getVal('eval-deputy-quality'))));
+        payload.deputy_score_progress = Math.min(20, Math.max(0, this.getVal('eval-deputy-progress-input', this.getVal('eval-deputy-progress'))));
+        payload.deputy_score_attitude = Math.min(20, Math.max(0, this.getVal('eval-deputy-attitude-input', this.getVal('eval-deputy-attitude'))));
+        payload.deputy_score_discipline = Math.min(10, Math.max(0, this.getVal('eval-deputy-discipline-input', this.getVal('eval-deputy-discipline'))));
+        payload.deputy_score_test = Math.min(10, Math.max(0, this.getVal('eval-deputy-test-input', this.getVal('eval-deputy-test'))));
+        payload.deputy_notes = (document.getElementById('eval-input-notes')?.value || '').trim();
+      } 
+      
+      // 4. TRƯỞNG ĐƠN VỊ (Giám đốc, Admin) -> KÊ CỘT 4
+      if (userCol === 'head' || Auth.isAdmin() || Auth.isDirector()) {
+        payload.head_score_volume = Math.min(20, Math.max(0, this.getVal('eval-head-volume-input', this.getVal('eval-head-volume'))));
+        payload.head_score_quality = Math.min(20, Math.max(0, this.getVal('eval-head-quality-input', this.getVal('eval-head-quality'))));
+        payload.head_score_progress = Math.min(20, Math.max(0, this.getVal('eval-head-progress-input', this.getVal('eval-head-progress'))));
+        payload.head_score_attitude = Math.min(20, Math.max(0, this.getVal('eval-head-attitude-input', this.getVal('eval-head-attitude'))));
+        payload.head_score_discipline = Math.min(10, Math.max(0, this.getVal('eval-head-discipline-input', this.getVal('eval-head-discipline'))));
+        payload.head_score_test = Math.min(10, Math.max(0, this.getVal('eval-head-test-input', this.getVal('eval-head-test'))));
+        payload.head_notes = (document.getElementById('eval-input-notes')?.value || '').trim();
+      }
+
+      // Check validation before submitting
+      if (action === 'submit') {
+        if (!payload.approver_mgr_id) {
+          alert('Vui lòng chọn Lãnh đạo phòng thẩm định trước khi chuyển duyệt!');
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalHtml;
+          }
+          return;
+        }
+        if (!payload.approver_director_id) {
+          alert('Vui lòng chọn thành viên Ban Giám đốc phê duyệt trước khi chuyển duyệt!');
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalHtml;
+          }
+          return;
+        }
+      }
+
+      const res = await apiFetch('/api/evaluations/my', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+
+      const succMsg = res.message || `Đã cập nhật phiếu đánh giá tháng ${month}/${year} thành công!`;
+
+      if (window.showToast) {
+        showToast('success', succMsg);
+      } else {
+        alert(`✅ ${succMsg}`);
+      }
+
+      App.closeModal();
+    } catch (err) {
+      console.error(err);
+      alert('Lỗi: ' + err.message);
+    } finally {
+      if (saveBtn) {
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalHtml || '<i class="ph-bold ph-floppy-disk text-base"></i> Lưu phiếu đánh giá';
       }
     }
   },
