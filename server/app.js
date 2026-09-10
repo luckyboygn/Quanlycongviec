@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const compression = require('compression');
 const path = require('path');
 const { UPLOADS_DIR } = require('./config/constants');
 const apiRoutes = require('./routes/index');
@@ -7,13 +8,18 @@ const apiRoutes = require('./routes/index');
 const app = express();
 
 // Middlewares
+app.use(compression());
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static files
-app.use(express.static(path.join(__dirname, '../public')));
-app.use('/uploads', express.static(UPLOADS_DIR));
+// Static files with caching
+const staticOptions = {
+  maxAge: process.env.NODE_ENV === 'production' ? '1d' : '1h',
+  etag: true
+};
+app.use(express.static(path.join(__dirname, '../public'), staticOptions));
+app.use('/uploads', express.static(UPLOADS_DIR, staticOptions));
 
 // API Routes mounting
 app.use('/api', apiRoutes);

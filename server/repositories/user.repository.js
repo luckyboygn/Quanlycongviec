@@ -63,6 +63,10 @@ const UserRepository = {
   },
 
   async updateSessionId(userId, sessionId) {
+    try {
+      const authMiddleware = require('../middleware/auth.middleware');
+      if (authMiddleware.invalidateCache) authMiddleware.invalidateCache(userId);
+    } catch (e) {}
     return await db.runAsync('UPDATE users SET current_session_id = ? WHERE id = ?', [sessionId, userId]);
   },
 
@@ -79,6 +83,10 @@ const UserRepository = {
   },
 
   async update(id, fields) {
+    try {
+      const authMiddleware = require('../middleware/auth.middleware');
+      if (authMiddleware.invalidateCache) authMiddleware.invalidateCache(id);
+    } catch (e) {}
     const keys = Object.keys(fields);
     const setClause = keys.map(k => `${k} = ?`).join(', ');
     const values = Object.values(fields);
@@ -87,6 +95,10 @@ const UserRepository = {
   },
 
   async updateStatus(id, status) {
+    try {
+      const authMiddleware = require('../middleware/auth.middleware');
+      if (authMiddleware.invalidateCache) authMiddleware.invalidateCache(id);
+    } catch (e) {}
     return await db.runAsync('UPDATE users SET status = ? WHERE id = ?', [status, id]);
   },
 

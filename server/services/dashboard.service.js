@@ -5,60 +5,68 @@ const DashboardService = {
     const today = new Date().toISOString().split('T')[0];
     const deptId = query.department_id ? parseInt(query.department_id) : (user.department_id || 1);
 
-    // 1. Institute Level Metrics
-    const instTasksTotal = await db.getAsync(`SELECT COUNT(*) as count FROM tasks`);
-    const instTasksComp = await db.getAsync(`SELECT COUNT(*) as count FROM tasks WHERE status = 'completed'`);
-    const instTasksInProg = await db.getAsync(`SELECT COUNT(*) as count FROM tasks WHERE status = 'in_progress'`);
-    const instTasksOverdue = await db.getAsync(`SELECT COUNT(*) as count FROM tasks WHERE status = 'overdue' OR (status != 'completed' AND due_date IS NOT NULL AND due_date < ?)`, [today]);
-    const instTasksPending = await db.getAsync(`SELECT COUNT(*) as count FROM tasks WHERE status = 'pending'`);
-    const instAvgProg = await db.getAsync(`SELECT ROUND(AVG(COALESCE(progress, 0)), 1) as avg FROM tasks`);
+    const [tasksStat, logsStat] = await Promise.all([
+      db.getAsync(`
+        SELECT 
+          COUNT(*) as inst_total,
+          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as inst_completed,
+          SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as inst_in_progress,
+          SUM(CASE WHEN status = 'overdue' OR (status != 'completed' AND due_date IS NOT NULL AND due_date < ?) THEN 1 ELSE 0 END) as inst_overdue,
+          SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as inst_pending,
+          ROUND(AVG(COALESCE(progress, 0)), 1) as inst_avg_progress,
 
-    const instLogsTotal = await db.getAsync(`SELECT COUNT(*) as count, COALESCE(SUM(hours_spent), 0) as total_hours FROM personal_work_logs`);
-    const instLogsInProg = await db.getAsync(`SELECT COUNT(*) as count FROM personal_work_logs WHERE status = 'in_progress'`);
-    const instLogsComp = await db.getAsync(`SELECT COUNT(*) as count FROM personal_work_logs WHERE status = 'completed'`);
+          SUM(CASE WHEN department_id = ? THEN 1 ELSE 0 END) as dept_total,
+          SUM(CASE WHEN department_id = ? AND status = 'completed' THEN 1 ELSE 0 END) as dept_completed,
+          SUM(CASE WHEN department_id = ? AND status = 'in_progress' THEN 1 ELSE 0 END) as dept_in_progress,
+          SUM(CASE WHEN department_id = ? AND (status = 'overdue' OR (status != 'completed' AND due_date IS NOT NULL AND due_date < ?)) THEN 1 ELSE 0 END) as dept_overdue,
+          SUM(CASE WHEN department_id = ? AND status = 'pending' THEN 1 ELSE 0 END) as dept_pending,
+          ROUND(AVG(CASE WHEN department_id = ? THEN COALESCE(progress, 0) ELSE NULL END), 1) as dept_avg_progress
+        FROM tasks
+      `, [today, deptId, deptId, deptId, deptId, today, deptId, deptId]),
 
-    // 2. Department Level Metrics
-    const deptTasksTotal = await db.getAsync(`SELECT COUNT(*) as count FROM tasks WHERE department_id = ?`, [deptId]);
-    const deptTasksComp = await db.getAsync(`SELECT COUNT(*) as count FROM tasks WHERE department_id = ? AND status = 'completed'`, [deptId]);
-    const deptTasksInProg = await db.getAsync(`SELECT COUNT(*) as count FROM tasks WHERE department_id = ? AND status = 'in_progress'`, [deptId]);
-    const deptTasksOverdue = await db.getAsync(`SELECT COUNT(*) as count FROM tasks WHERE department_id = ? AND (status = 'overdue' OR (status != 'completed' AND due_date IS NOT NULL AND due_date < ?))`, [deptId, today]);
-    const deptTasksPending = await db.getAsync(`SELECT COUNT(*) as count FROM tasks WHERE department_id = ? AND status = 'pending'`, [deptId]);
-    const deptAvgProg = await db.getAsync(`SELECT ROUND(AVG(COALESCE(progress, 0)), 1) as avg FROM tasks WHERE department_id = ?`, [deptId]);
+      db.getAsync(`
+        SELECT 
+          COUNT(*) as inst_total_logs,
+          COALESCE(SUM(hours_spent), 0) as inst_total_log_hours,
+          SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as inst_in_progress_logs,
+          SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as inst_completed_logs,
 
-    const deptLogsTotal = await db.getAsync(`SELECT COUNT(*) as count, COALESCE(SUM(hours_spent), 0) as total_hours FROM personal_work_logs WHERE department_id = ?`, [deptId]);
-    const deptLogsInProg = await db.getAsync(`SELECT COUNT(*) as count FROM personal_work_logs WHERE department_id = ? AND status = 'in_progress'`, [deptId]);
-    const deptLogsComp = await db.getAsync(`SELECT COUNT(*) as count FROM personal_work_logs WHERE department_id = ? AND status = 'completed'`, [deptId]);
+          SUM(CASE WHEN department_id = ? THEN 1 ELSE 0 END) as dept_total_logs,
+          COALESCE(SUM(CASE WHEN department_id = ? THEN hours_spent ELSE 0 END), 0) as dept_total_log_hours,
+          SUM(CASE WHEN department_id = ? AND status = 'in_progress' THEN 1 ELSE 0 END) as dept_in_progress_logs,
+          SUM(CASE WHEN department_id = ? AND status = 'completed' THEN 1 ELSE 0 END) as dept_completed_logs
+        FROM personal_work_logs
+      `, [deptId, deptId, deptId, deptId])
+    ]);
 
-    const iTotal = instTasksTotal ? instTasksTotal.count : 0;
-    const iComp = instTasksComp ? instTasksComp.count : 0;
-    const dTotal = deptTasksTotal ? deptTasksTotal.count : 0;
-    const dComp = deptTasksComp ? deptTasksComp.count : 0;
+    const ts = tasksStat || {};
+    const ls = logsStat || {};
 
     return {
       institute: {
-        total: iTotal,
-        completed: iComp,
-        in_progress: instTasksInProg ? instTasksInProg.count : 0,
-        overdue: instTasksOverdue ? instTasksOverdue.count : 0,
-        pending: instTasksPending ? instTasksPending.count : 0,
-        avg_progress: instAvgProg ? (instAvgProg.avg || 0) : 0,
-        total_logs: instLogsTotal ? instLogsTotal.count : 0,
-        total_log_hours: instLogsTotal ? instLogsTotal.total_hours : 0,
-        in_progress_logs: instLogsInProg ? instLogsInProg.count : 0,
-        completed_logs: instLogsComp ? instLogsComp.count : 0
+        total: parseInt(ts.inst_total || 0),
+        completed: parseInt(ts.inst_completed || 0),
+        in_progress: parseInt(ts.inst_in_progress || 0),
+        overdue: parseInt(ts.inst_overdue || 0),
+        pending: parseInt(ts.inst_pending || 0),
+        avg_progress: parseFloat(ts.inst_avg_progress || 0),
+        total_logs: parseInt(ls.inst_total_logs || 0),
+        total_log_hours: parseFloat(ls.inst_total_log_hours || 0),
+        in_progress_logs: parseInt(ls.inst_in_progress_logs || 0),
+        completed_logs: parseInt(ls.inst_completed_logs || 0)
       },
       department: {
         department_id: deptId,
-        total: dTotal,
-        completed: dComp,
-        in_progress: deptTasksInProg ? deptTasksInProg.count : 0,
-        overdue: deptTasksOverdue ? deptTasksOverdue.count : 0,
-        pending: deptTasksPending ? deptTasksPending.count : 0,
-        avg_progress: deptAvgProg ? (deptAvgProg.avg || 0) : 0,
-        total_logs: deptLogsTotal ? deptLogsTotal.count : 0,
-        total_log_hours: deptLogsTotal ? deptLogsTotal.total_hours : 0,
-        in_progress_logs: deptLogsInProg ? deptLogsInProg.count : 0,
-        completed_logs: deptLogsComp ? deptLogsComp.count : 0
+        total: parseInt(ts.dept_total || 0),
+        completed: parseInt(ts.dept_completed || 0),
+        in_progress: parseInt(ts.dept_in_progress || 0),
+        overdue: parseInt(ts.dept_overdue || 0),
+        pending: parseInt(ts.dept_pending || 0),
+        avg_progress: parseFloat(ts.dept_avg_progress || 0),
+        total_logs: parseInt(ls.dept_total_logs || 0),
+        total_log_hours: parseFloat(ls.dept_total_log_hours || 0),
+        in_progress_logs: parseInt(ls.dept_in_progress_logs || 0),
+        completed_logs: parseInt(ls.dept_completed_logs || 0)
       }
     };
   },

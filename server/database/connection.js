@@ -12,6 +12,10 @@ if (databaseUrl) {
   
   const poolConfig = {
     connectionString: databaseUrl,
+    max: 20,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 5000,
+    keepAlive: true,
   };
 
   const isInternalRender = databaseUrl.includes('@dpg-') && !databaseUrl.includes('.render.com');

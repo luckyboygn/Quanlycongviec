@@ -239,12 +239,20 @@ async function initDB() {
 
     // Indexes on tasks & task assignees
     await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_tasks_dept_status_due ON tasks(department_id, status, due_date)`);
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_tasks_status_due ON tasks(status, due_date)`);
     await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_tasks_created_by ON tasks(created_by)`);
     await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_task_assignees_user ON task_assignees(user_id, task_id)`);
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_task_assignees_task_user ON task_assignees(task_id, user_id)`);
 
     // Indexes on notifications & users
     await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_notif_user_read ON notifications(user_id, is_read, created_at)`);
     await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_users_dept_status ON users(department_id, status)`);
+
+    // Indexes on reports & news & evaluations
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_reports_user_type_date ON reports(user_id, type, report_date)`);
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_reports_dept_date ON reports(department_id, report_date)`);
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_news_pinned_date ON news(is_pinned, created_at)`);
+    await db.runAsync(`CREATE INDEX IF NOT EXISTS idx_evaluations_status ON evaluations(status)`);
   } catch (e) {}
 
   // 11. News & Activity Bulletin Board table

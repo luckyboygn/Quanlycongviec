@@ -1,7 +1,16 @@
 const db = require('../database/connection');
 
+let lastAutoCompleteCheck = 0;
+const AUTO_COMPLETE_THROTTLE_MS = 60000; // Throttle to at most once per minute
+
 const DiaryRepository = {
   async checkAndAutoCompleteLogs() {
+    const nowMs = Date.now();
+    if (nowMs - lastAutoCompleteCheck < AUTO_COMPLETE_THROTTLE_MS) {
+      return;
+    }
+    lastAutoCompleteCheck = nowMs;
+
     try {
       const now = new Date();
       const today = now.toISOString().split('T')[0];
@@ -22,8 +31,8 @@ const DiaryRepository = {
   },
 
   async findAll(filter = {}, user = null) {
-    // Run auto complete check first
-    await this.checkAndAutoCompleteLogs();
+    // Run throttled auto complete check
+    this.checkAndAutoCompleteLogs().catch(() => {});
 
     let sql = `
       SELECT pwl.*, 

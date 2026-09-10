@@ -57,16 +57,33 @@ const TaskRepository = {
     sql += ` ORDER BY CASE t.priority WHEN 'urgent' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END, t.due_date ASC, t.created_at DESC`;
 
     const tasks = await db.allAsync(sql, params);
+    if (!tasks || tasks.length === 0) return [];
+
+    // Batch fetch assignees for all tasks in a single query (fixes N+1 latency)
+    const taskIds = tasks.map(t => t.id);
+    const placeholders = taskIds.map(() => '?').join(',');
+    const allAssignees = await db.allAsync(`
+      SELECT ta.task_id, u.id, u.full_name, u.position, u.role, ta.is_leader
+      FROM task_assignees ta
+      JOIN users u ON ta.user_id = u.id
+      WHERE ta.task_id IN (${placeholders})
+      ORDER BY ta.is_leader DESC, u.full_name ASC
+    `, taskIds);
+
+    const assigneesByTask = {};
+    for (const a of allAssignees) {
+      if (!assigneesByTask[a.task_id]) assigneesByTask[a.task_id] = [];
+      assigneesByTask[a.task_id].push({
+        id: a.id,
+        full_name: a.full_name,
+        position: a.position,
+        role: a.role,
+        is_leader: a.is_leader
+      });
+    }
 
     for (const task of tasks) {
-      const assignees = await db.allAsync(`
-        SELECT u.id, u.full_name, u.position, u.role, ta.is_leader
-        FROM task_assignees ta
-        JOIN users u ON ta.user_id = u.id
-        WHERE ta.task_id = ?
-        ORDER BY ta.is_leader DESC, u.full_name ASC
-      `, [task.id]);
-      task.assignees = assignees;
+      task.assignees = assigneesByTask[task.id] || [];
       try {
         task.attachment_links = task.attachment_links ? JSON.parse(task.attachment_links) : [];
       } catch (e) {

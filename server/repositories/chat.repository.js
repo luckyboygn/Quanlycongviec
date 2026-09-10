@@ -101,19 +101,24 @@ const ChatRepository = {
       };
     }
 
-    // Nếu là Ban Giám đốc hoặc Admin, lấy danh sách tất cả các kênh phòng ban
+    // Nếu là Ban Giám đốc hoặc Admin, lấy danh sách tất cả các kênh phòng ban song song
     if (currentUser && (currentUser.role === 'director' || currentUser.role === 'admin')) {
       const allDepts = await db.allAsync(`SELECT id, name, code FROM departments ORDER BY id ASC`);
-      for (const d of allDepts) {
-        const cleanDName = d.name.startsWith('Phòng') ? d.name : ('Phòng ' + d.name);
-        const lMsg = await db.getAsync(`
+      const deptMsgPromises = allDepts.map(d => 
+        db.getAsync(`
           SELECT m.content, m.created_at, u.full_name as sender_name
           FROM messages m
           JOIN users u ON m.sender_id = u.id
           WHERE m.channel = ?
           ORDER BY m.created_at DESC LIMIT 1
-        `, [`dept_${d.id}`]);
+        `, [`dept_${d.id}`])
+      );
 
+      const msgs = await Promise.all(deptMsgPromises);
+
+      allDepts.forEach((d, idx) => {
+        const cleanDName = d.name.startsWith('Phòng') ? d.name : ('Phòng ' + d.name);
+        const lMsg = msgs[idx];
         departmentChannels.push({
           id: `dept_${d.id}`,
           dept_id: d.id,
@@ -124,7 +129,7 @@ const ChatRepository = {
           last_message: lMsg ? `${lMsg.sender_name}: ${lMsg.content}` : 'Chưa có tin nhắn...',
           last_message_time: lMsg ? lMsg.created_at : null
         });
-      }
+      });
     }
 
     return {
