@@ -654,6 +654,16 @@ const PersonalLogs = {
     `;
   },
 
+  formatDateDMY(dStr) {
+    if (!dStr) return '';
+    const clean = String(dStr).split('T')[0].split(' ')[0];
+    const parts = clean.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dStr;
+  },
+
   renderTable(logs) {
     const container = document.getElementById('personal-logs-table-container');
     if (!container) return;
@@ -719,12 +729,14 @@ const PersonalLogs = {
             const approvalStatus = l.approval_status || 'pending';
             const canApprove = isDirectorOrAdmin || (isManager && l.department_id == Auth.user.department_id);
             const safeTitle = (l.title || '').replace(/"/g, '&quot;').replace(/'/g, "\\'");
+            const startDateStr = this.formatDateDMY(l.start_date);
+            const endDateStr = this.formatDateDMY(l.end_date);
 
             let approvalBadge = '';
             if (approvalStatus === 'approved') {
               approvalBadge = `
                 <div class="inline-flex flex-col items-center">
-                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 shadow-2xs" title="Duyệt bởi: ${l.approved_by_name || 'Lãnh đạo'} lúc ${l.approved_at ? l.approved_at.substring(0, 16) : ''}">
+                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 shadow-2xs" title="Duyệt bởi: ${l.approved_by_name || 'Lãnh đạo'} lúc ${this.formatDateDMY(l.approved_at)}">
                     <i class="ph-bold ph-check-circle"></i> Đã duyệt
                   </span>
                   <span class="text-[10px] text-slate-400 mt-0.5 truncate max-w-[120px]">${l.approved_by_name || 'Lãnh đạo'}</span>
@@ -751,8 +763,8 @@ const PersonalLogs = {
               <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition ${isCompleted ? 'bg-emerald-50/20 dark:bg-emerald-950/10' : ''}">
                 <td class="px-4 py-4 whitespace-nowrap">
                   <div class="flex items-center gap-1.5 font-mono text-xs font-bold text-slate-800 dark:text-white">
-                    <span class="${isCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400'}">${l.start_date}</span>
-                    ${l.start_date !== l.end_date ? `<i class="ph-bold ph-arrow-right text-slate-400 text-[10px]"></i><span class="text-cyan-600 dark:text-cyan-400">${l.end_date}</span>` : ''}
+                    <span class="${isCompleted ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-blue-400'}">${startDateStr}</span>
+                    ${l.start_date !== l.end_date ? `<i class="ph-bold ph-arrow-right text-slate-400 text-[10px]"></i><span class="text-cyan-600 dark:text-cyan-400">${endDateStr}</span>` : ''}
                   </div>
                   ${l.start_time && l.end_time ? `
                     <div class="mt-1">
@@ -1445,31 +1457,72 @@ const PersonalLogs = {
         return;
       }
 
-      const excelData = logs.map((l, index) => {
+      const formatDMY = (dateInput) => {
+        if (!dateInput) return '';
+        const clean = String(dateInput).split('T')[0].split(' ')[0];
+        const parts = clean.split('-');
+        if (parts.length === 3) {
+          return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        return dateInput;
+      };
+
+      const getDaysBetween = (startDateStr, endDateStr) => {
+        const cleanStart = String(startDateStr || '').split('T')[0].split(' ')[0];
+        const cleanEnd = String(endDateStr || cleanStart).split('T')[0].split(' ')[0];
+        if (!cleanStart) return [];
+        if (!cleanEnd || cleanStart === cleanEnd) return [cleanStart];
+
+        const start = new Date(cleanStart);
+        const end = new Date(cleanEnd);
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+          return [cleanStart];
+        }
+
+        const result = [];
+        const curr = new Date(start);
+        while (curr <= end) {
+          const y = curr.getFullYear();
+          const m = String(curr.getMonth() + 1).padStart(2, '0');
+          const d = String(curr.getDate()).padStart(2, '0');
+          result.push(`${y}-${m}-${d}`);
+          curr.setDate(curr.getDate() + 1);
+        }
+        return result;
+      };
+
+      const excelData = [];
+      let stt = 1;
+
+      logs.forEach((l) => {
         const timeRange = (l.start_time && l.end_time) ? `${l.start_time} - ${l.end_time}` : 'Cả ngày';
         const approvalText = l.approval_status === 'approved' ? 'Đã duyệt' : (l.approval_status === 'rejected' ? 'Từ chối' : 'Chờ duyệt');
-        return {
-          'STT': index + 1,
-          'Họ và tên cán bộ': l.user_name,
-          'Chức vụ': l.user_position || l.user_role,
-          'Phòng ban': l.department_name,
-          'Lãnh đạo phụ trách': l.supervisor_name ? `${l.supervisor_name} (${l.supervisor_position || 'Lãnh đạo'})` : 'Chưa chỉ định',
-          'Từ ngày': l.start_date,
-          'Đến ngày': l.end_date,
-          'Khung giờ': timeRange,
-          'Thời lượng (phút)': l.hours_spent,
-          'Quy đổi (giờ)': Math.round((parseFloat(l.hours_spent || 0) / 60) * 10) / 10,
-          'Trạng thái tiến độ': l.status === 'completed' ? 'Đã hoàn thành' : 'Đang thực hiện',
-          'Trạng thái duyệt': approvalText,
-          'Người duyệt': l.approved_by_name || '',
-          'Thời gian duyệt': l.approved_at || '',
-          'Ý kiến / Ghi chú duyệt': l.approval_comment || '',
-          'Phân loại công việc': l.activity_type || 'Công tác chuyên môn',
-          'Tên đầu việc / Nội dung': l.title,
-          'Chi tiết thực hiện': l.description,
-          'Địa điểm': l.location || 'Tại Trường ĐT CB Agribank',
-          'Nhiệm vụ liên quan': l.task_title || l.task_name || 'Việc phát sinh ngoài kế hoạch'
-        };
+        const days = getDaysBetween(l.start_date, l.end_date);
+
+        // Mỗi ngày là một dòng trong file Excel theo đúng yêu cầu
+        days.forEach(dayIso => {
+          excelData.push({
+            'STT': stt++,
+            'Họ và tên cán bộ': l.user_name || '',
+            'Chức vụ': l.user_position || l.user_role || '',
+            'Phòng ban': l.department_name || '',
+            'Lãnh đạo phụ trách': l.supervisor_name ? `${l.supervisor_name} (${l.supervisor_position || 'Lãnh đạo'})` : 'Chưa chỉ định',
+            'Ngày thực hiện': formatDMY(dayIso),
+            'Khung giờ': timeRange,
+            'Thời lượng (phút)': l.hours_spent || 480,
+            'Quy đổi (giờ)': Math.round((parseFloat(l.hours_spent || 0) / 60) * 10) / 10,
+            'Trạng thái tiến độ': l.status === 'completed' ? 'Đã hoàn thành' : 'Đang thực hiện',
+            'Trạng thái duyệt': approvalText,
+            'Người duyệt': l.approved_by_name || '',
+            'Thời gian duyệt': formatDMY(l.approved_at),
+            'Ý kiến / Ghi chú duyệt': l.approval_comment || '',
+            'Phân loại công việc': l.activity_type || 'Công tác chuyên môn',
+            'Tên đầu việc / Nội dung': l.title || '',
+            'Chi tiết thực hiện': l.description || '',
+            'Địa điểm': l.location || 'Tại Trường ĐT CB Agribank',
+            'Nhiệm vụ liên quan': l.task_title || l.task_name || 'Việc phát sinh ngoài kế hoạch'
+          });
+        });
       });
 
       const ws = XLSX.utils.json_to_sheet(excelData);
@@ -1479,15 +1532,14 @@ const PersonalLogs = {
         { wch: 18 }, // Chức vụ
         { wch: 30 }, // Phòng ban
         { wch: 25 }, // Lãnh đạo phụ trách
-        { wch: 14 }, // Từ ngày
-        { wch: 14 }, // Đến ngày
+        { wch: 16 }, // Ngày thực hiện
         { wch: 16 }, // Khung giờ
         { wch: 18 }, // Số phút
         { wch: 14 }, // Quy đổi giờ
         { wch: 18 }, // Tiến độ
         { wch: 16 }, // Trạng thái duyệt
         { wch: 22 }, // Người duyệt
-        { wch: 20 }, // Thời gian duyệt
+        { wch: 16 }, // Thời gian duyệt
         { wch: 30 }, // Ghi chú duyệt
         { wch: 22 }, // Phân loại
         { wch: 35 }, // Tên việc
@@ -1506,6 +1558,12 @@ const PersonalLogs = {
     } catch (err) {
       console.error(err);
       alert('Lỗi xuất Excel: ' + err.message);
+    }
+  },
+
+  openDetailModal(logId) {
+    if (window.Dashboard && Dashboard.openPersonalLogDetailModal) {
+      Dashboard.openPersonalLogDetailModal(logId);
     }
   },
 

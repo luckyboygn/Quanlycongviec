@@ -5,6 +5,7 @@ const authenticateToken = require('../middleware/auth.middleware');
 
 router.get('/', authenticateToken, DiaryController.getAll);
 router.get('/stats', authenticateToken, DiaryController.getStats);
+router.get('/:id', authenticateToken, DiaryController.getById);
 router.post('/', authenticateToken, DiaryController.create);
 router.post('/batch-approve', authenticateToken, DiaryController.batchApprove);
 router.put('/:id/approve', authenticateToken, DiaryController.approve);

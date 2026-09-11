@@ -967,15 +967,27 @@ const Dashboard = {
     App.navigateTo('personal-logs');
   },
 
+  formatDateDMY(dStr) {
+    if (!dStr) return '';
+    const clean = String(dStr).split('T')[0].split(' ')[0];
+    const parts = clean.split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+    return dStr;
+  },
+
   async openPersonalLogDetailModal(logId) {
-    let allLogs = [...(this.cachedDeptLogs || []), ...(this.cachedSchoolLogs || [])];
+    let allLogs = [...(this.cachedDeptLogs || []), ...(this.cachedSchoolLogs || []), ...(this.currentFilteredModalTasks || [])];
     let log = allLogs.find(l => l.id == logId);
     if (!log) {
       try {
-        const fetched = await apiFetch('/api/personal-logs');
-        log = (fetched || []).find(l => l.id == logId) || fetched[0];
+        log = await apiFetch(`/api/personal-logs/${logId}`);
       } catch (e) {
-        console.warn(e);
+        try {
+          const fetched = await apiFetch('/api/personal-logs');
+          log = (fetched || []).find(l => l.id == logId);
+        } catch (err) {}
       }
     }
     if (!log) return;
@@ -984,6 +996,11 @@ const Dashboard = {
     if (!modalContainer) return;
 
     const isCompleted = log.status === 'completed';
+    const startDateFormatted = this.formatDateDMY(log.start_date);
+    const endDateFormatted = this.formatDateDMY(log.end_date);
+    const dateRangeStr = (log.start_date && log.end_date && log.start_date !== log.end_date)
+      ? `${startDateFormatted} &rarr; ${endDateFormatted}`
+      : (startDateFormatted || 'Hôm nay');
 
     modalContainer.innerHTML = `
       <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -995,7 +1012,7 @@ const Dashboard = {
               </div>
               <div>
                 <h3 class="font-bold text-lg leading-tight">Chi tiết Nhật ký Kê khai Công việc</h3>
-                <p class="text-xs text-white/80 mt-0.5">Cán bộ: <b>${log.user_name}</b> (${log.department_code || 'PHÒNG'})</p>
+                <p class="text-xs text-white/80 mt-0.5">Cán bộ: <b>${log.user_name || log.full_name || 'Cán bộ'}</b> (${log.department_code || log.department_name || 'PHÒNG'})</p>
               </div>
             </div>
             <button onclick="App.closeModal()" class="p-2 text-white/80 hover:text-white rounded-xl hover:bg-white/20 transition">
@@ -1013,7 +1030,7 @@ const Dashboard = {
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div class="p-3 bg-slate-50 dark:bg-slate-700/30 rounded-xl border border-slate-200 dark:border-slate-700">
                 <span class="text-slate-400 block text-[10px] font-bold uppercase">Thời gian thực hiện</span>
-                <span class="font-bold text-slate-800 dark:text-white font-mono mt-1 block">${log.start_date} ${log.start_date !== log.end_date ? `&rarr; ${log.end_date}` : ''}</span>
+                <span class="font-bold text-slate-800 dark:text-white font-mono mt-1 block">${dateRangeStr}</span>
                 ${log.start_time ? `<span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block mt-0.5">(${log.start_time} - ${log.end_time || ''})</span>` : ''}
               </div>
 
@@ -1042,7 +1059,7 @@ const Dashboard = {
             <div>
               <span class="text-slate-400 block text-[10px] font-bold uppercase mb-1">Chi tiết công việc đã thực hiện</span>
               <div class="p-3.5 bg-slate-50 dark:bg-slate-700/30 rounded-xl text-slate-700 dark:text-slate-200 leading-relaxed whitespace-pre-wrap border border-slate-100 dark:border-slate-700">
-                ${log.description}
+                ${log.description || 'Không có mô tả chi tiết'}
               </div>
             </div>
           </div>
@@ -1050,9 +1067,9 @@ const Dashboard = {
           <div class="p-4 px-6 bg-slate-50 dark:bg-slate-700/50 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
             <button onclick="App.closeModal(); Dashboard.goToUserLogs(${log.user_id})" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition flex items-center gap-1.5">
               <i class="ph-bold ph-arrow-square-out"></i>
-              <span>Mở Toàn bộ Bản Kê Khai của ${log.user_name}</span>
+              <span>Mở Toàn bộ Bản Kê Khai của ${log.user_name || 'Cán bộ'}</span>
             </button>
-            <button onclick="App.closeModal()" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold text-xs transition">
+            <button onclick="App.closeModal()" class="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-600 dark:hover:bg-slate-500 text-slate-700 dark:text-slate-200 font-bold text-xs transition">
               Đóng
             </button>
           </div>
@@ -1288,7 +1305,11 @@ const Dashboard = {
                       const logUser = l.user_name || l.full_name || 'Cán bộ';
                       const logDept = l.department_name || '';
                       const logPos = l.user_position || l.position || '';
-                      const logDate = l.start_date || l.work_date || 'Hôm nay';
+                      const logStartDate = this.formatDateDMY(l.start_date || l.work_date) || 'Hôm nay';
+                      const logEndDate = l.end_date ? this.formatDateDMY(l.end_date) : '';
+                      const dateDisplay = (l.start_date && l.end_date && l.start_date !== l.end_date)
+                        ? `${logStartDate} &rarr; ${logEndDate}`
+                        : logStartDate;
                       const logHours = parseFloat(l.hours_spent || l.actual_hours || 0).toFixed(1);
                       const isDone = l.status === 'completed';
                       const searchIndex = `${logTitle} ${logUser} ${logDept} ${logDesc}`.toLowerCase();
@@ -1306,8 +1327,8 @@ const Dashboard = {
                             </span>
                           </td>
                           <td class="px-5 py-4 text-center whitespace-nowrap text-xs text-slate-600 dark:text-slate-300 font-medium">
-                            <div class="font-bold font-mono">${logDate}</div>
-                            ${l.start_time && l.end_time ? `<span class="text-[11px] text-slate-400">${l.start_time} - ${l.end_time}</span>` : (l.end_date && l.end_date !== logDate ? `<span class="text-[11px] text-slate-400">Đến ${l.end_date}</span>` : '')}
+                            <div class="font-bold font-mono">${dateDisplay}</div>
+                            ${l.start_time && l.end_time ? `<span class="text-[11px] text-slate-400 font-mono">${l.start_time} - ${l.end_time}</span>` : ''}
                           </td>
                           <td class="px-5 py-4 text-center whitespace-nowrap">
                             <span class="px-2.5 py-1 rounded-lg text-xs font-black bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
@@ -1318,7 +1339,7 @@ const Dashboard = {
                             ${isDone ? statusBadges.completed : statusBadges.in_progress}
                           </td>
                           <td class="px-5 py-4 text-right whitespace-nowrap">
-                            <button onclick="App.closeModal(); PersonalLogs.openDetailModal(${l.id})" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-[#b3821a] hover:text-white text-slate-700 dark:text-slate-200 font-bold text-xs transition flex items-center gap-1 ml-auto">
+                            <button onclick="Dashboard.openPersonalLogDetailModal(${l.id})" class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-[#b3821a] hover:text-white text-slate-700 dark:text-slate-200 font-bold text-xs transition flex items-center gap-1 ml-auto">
                               <span>Xem</span>
                               <i class="ph-bold ph-arrow-right"></i>
                             </button>
@@ -1349,6 +1370,7 @@ const Dashboard = {
                       const assigneesStr = t.assignees && t.assignees.length > 0
                         ? t.assignees.map(a => a.full_name).join(', ')
                         : (t.creator_name || 'Chưa phân công');
+                      const taskDueDate = this.formatDateDMY(t.due_date);
                       const searchIndex = `${t.title} ${t.department_name || ''} ${t.department_code || ''} ${assigneesStr}`.toLowerCase();
 
                       return `
@@ -1370,7 +1392,7 @@ const Dashboard = {
                           </td>
                           <td class="px-5 py-4 text-center whitespace-nowrap font-mono text-xs">
                             <div class="${isOverdue ? 'text-[#8b1d24] font-black' : 'text-slate-600 dark:text-slate-300 font-bold'}">
-                              ${t.due_date || 'Không có'}
+                              ${taskDueDate || 'Không có'}
                             </div>
                             ${isOverdue ? '<span class="text-[10px] text-[#8b1d24] font-extrabold uppercase block">Quá hạn</span>' : ''}
                           </td>

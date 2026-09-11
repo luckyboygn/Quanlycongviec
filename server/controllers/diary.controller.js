@@ -20,6 +20,17 @@ const DiaryController = {
     }
   },
 
+  async getById(req, res) {
+    try {
+      const logId = parseInt(req.params.id);
+      const log = await DiaryRepository.findById(logId);
+      if (!log) return res.status(404).json({ error: 'Không tìm thấy bản kê khai' });
+      res.json(log);
+    } catch (err) {
+      res.status(500).json({ error: 'Lỗi lấy chi tiết bản kê khai' });
+    }
+  },
+
   async create(req, res) {
     try {
       const { title, activity_type, start_date, end_date, start_time, end_time, hours_spent, location, description, result_outcome, attachment_url, task_id, task_name, status, auto_complete, supervisor_id } = req.body;

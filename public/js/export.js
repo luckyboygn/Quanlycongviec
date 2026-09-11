@@ -32,24 +32,68 @@ const Export = {
         return;
       }
 
-      const excelData = logs.map((l, index) => {
+      const formatDMY = (dateInput) => {
+        if (!dateInput) return '';
+        const clean = String(dateInput).split('T')[0].split(' ')[0];
+        const parts = clean.split('-');
+        if (parts.length === 3) {
+          return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+        return dateInput;
+      };
+
+      const getDaysBetween = (startDateStr, endDateStr) => {
+        const cleanStart = String(startDateStr || '').split('T')[0].split(' ')[0];
+        const cleanEnd = String(endDateStr || cleanStart).split('T')[0].split(' ')[0];
+        if (!cleanStart) return [];
+        if (!cleanEnd || cleanStart === cleanEnd) return [cleanStart];
+
+        const start = new Date(cleanStart);
+        const end = new Date(cleanEnd);
+        if (isNaN(start.getTime()) || isNaN(end.getTime()) || start > end) {
+          return [cleanStart];
+        }
+
+        const result = [];
+        const curr = new Date(start);
+        while (curr <= end) {
+          const y = curr.getFullYear();
+          const m = String(curr.getMonth() + 1).padStart(2, '0');
+          const d = String(curr.getDate()).padStart(2, '0');
+          result.push(`${y}-${m}-${d}`);
+          curr.setDate(curr.getDate() + 1);
+        }
+        return result;
+      };
+
+      const excelData = [];
+      let stt = 1;
+
+      logs.forEach((l) => {
         const timeRange = (l.start_time && l.end_time) ? `${l.start_time} - ${l.end_time}` : 'Cả ngày';
-        return {
-          'STT': index + 1,
-          'Họ và tên cán bộ': l.user_name,
-          'Chức vụ': l.user_position || l.user_role,
-          'Phòng ban': l.department_name,
-          'Từ ngày': l.start_date,
-          'Đến ngày': l.end_date,
-          'Khung giờ': timeRange,
-          'Thời lượng (phút)': l.hours_spent,
-          'Quy đổi (giờ)': Math.round((parseFloat(l.hours_spent || 0) / 60) * 10) / 10,
-          'Phân loại công việc': l.activity_type || 'Công tác chuyên môn',
-          'Tên đầu việc / Nội dung': l.title,
-          'Chi tiết thực hiện': l.description,
-          'Địa điểm': l.location || 'Tại Trường ĐT CB Agribank',
-          'Nhiệm vụ liên quan': l.task_title || l.task_name || 'Việc phát sinh ngoài kế hoạch'
-        };
+        const approvalText = l.approval_status === 'approved' ? 'Đã duyệt' : (l.approval_status === 'rejected' ? 'Từ chối' : 'Chờ duyệt');
+        const days = getDaysBetween(l.start_date, l.end_date);
+
+        days.forEach(dayIso => {
+          excelData.push({
+            'STT': stt++,
+            'Họ và tên cán bộ': l.user_name || '',
+            'Chức vụ': l.user_position || l.user_role || '',
+            'Phòng ban': l.department_name || '',
+            'Lãnh đạo phụ trách': l.supervisor_name ? `${l.supervisor_name} (${l.supervisor_position || 'Lãnh đạo'})` : 'Chưa chỉ định',
+            'Ngày thực hiện': formatDMY(dayIso),
+            'Khung giờ': timeRange,
+            'Thời lượng (phút)': l.hours_spent || 480,
+            'Quy đổi (giờ)': Math.round((parseFloat(l.hours_spent || 0) / 60) * 10) / 10,
+            'Trạng thái tiến độ': l.status === 'completed' ? 'Đã hoàn thành' : 'Đang thực hiện',
+            'Trạng thái duyệt': approvalText,
+            'Phân loại công việc': l.activity_type || 'Công tác chuyên môn',
+            'Tên đầu việc / Nội dung': l.title || '',
+            'Chi tiết thực hiện': l.description || '',
+            'Địa điểm': l.location || 'Tại Trường ĐT CB Agribank',
+            'Nhiệm vụ liên quan': l.task_title || l.task_name || 'Việc phát sinh ngoài kế hoạch'
+          });
+        });
       });
 
       const ws = XLSX.utils.json_to_sheet(excelData);
@@ -58,11 +102,13 @@ const Export = {
         { wch: 22 }, // Tên cán bộ
         { wch: 18 }, // Chức vụ
         { wch: 30 }, // Phòng ban
-        { wch: 14 }, // Từ ngày
-        { wch: 14 }, // Đến ngày
+        { wch: 25 }, // Lãnh đạo phụ trách
+        { wch: 16 }, // Ngày thực hiện
         { wch: 16 }, // Khung giờ
         { wch: 18 }, // Số phút
         { wch: 14 }, // Quy đổi giờ
+        { wch: 18 }, // Tiến độ
+        { wch: 16 }, // Trạng thái duyệt
         { wch: 22 }, // Phân loại
         { wch: 35 }, // Tên việc
         { wch: 45 }, // Chi tiết

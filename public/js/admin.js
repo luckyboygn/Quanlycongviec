@@ -368,15 +368,23 @@ const Admin = {
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100 dark:divide-slate-700 font-mono text-xs">
-                ${logs.map(l => `
-                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition">
-                    <td class="px-6 py-4 text-slate-400">${l.created_at}</td>
-                    <td class="px-6 py-4 font-bold text-slate-800 dark:text-white">${l.user_name || 'Hệ thống'}</td>
-                    <td class="px-6 py-4"><span class="px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 font-bold">${l.action}</span></td>
-                    <td class="px-6 py-4 text-slate-600 dark:text-slate-300">${l.entity_type} (#${l.entity_id || ''})</td>
-                    <td class="px-6 py-4 text-slate-500 truncate max-w-xs">${l.details || '—'}</td>
-                  </tr>
-                `).join('')}
+                ${logs.map(l => {
+                  const cleanDate = l.created_at ? (function(dStr) {
+                    const clean = String(dStr).split('T')[0].split(' ')[0];
+                    const parts = clean.split('-');
+                    return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : dStr;
+                  })(l.created_at) : '';
+
+                  return `
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/30 transition">
+                      <td class="px-6 py-4 text-slate-400 font-bold">${cleanDate}</td>
+                      <td class="px-6 py-4 font-bold text-slate-800 dark:text-white">${l.user_name || 'Hệ thống'}</td>
+                      <td class="px-6 py-4"><span class="px-2 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 font-bold">${l.action}</span></td>
+                      <td class="px-6 py-4 text-slate-600 dark:text-slate-300">${l.entity_type} (#${l.entity_id || ''})</td>
+                      <td class="px-6 py-4 text-slate-500 truncate max-w-xs">${l.details || '—'}</td>
+                    </tr>
+                  `;
+                }).join('')}
               </tbody>
             </table>
           </div>
