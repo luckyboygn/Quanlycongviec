@@ -33,22 +33,33 @@ if (databaseUrl) {
 
   function convertSqlToPg(sql) {
     let index = 1;
-    return sql.replace(/\?/g, () => `$${index++}`);
+    let converted = sql.replace(/\?/g, () => `$${index++}`);
+    if (/INSERT\s+OR\s+IGNORE\s+INTO/i.test(converted)) {
+      converted = converted.replace(/INSERT\s+OR\s+IGNORE\s+INTO/gi, 'INSERT INTO');
+      if (!/ON\s+CONFLICT/i.test(converted)) {
+        converted = converted.replace(/;?\s*$/, ' ON CONFLICT DO NOTHING');
+      }
+    }
+    if (/INSERT\s+OR\s+REPLACE\s+INTO/i.test(converted)) {
+      converted = converted.replace(/INSERT\s+OR\s+REPLACE\s+INTO/gi, 'INSERT INTO');
+    }
+    return converted;
   }
 
   db.runAsync = async function (sql, params = []) {
     let pgSql = convertSqlToPg(sql);
     const isInsert = /^\s*INSERT\s+INTO/i.test(pgSql);
     const hasReturning = /RETURNING/i.test(pgSql);
+    const hasConflict = /ON\s+CONFLICT/i.test(pgSql);
     const isAssignees = /task_assignees/i.test(pgSql);
-    if (isInsert && !hasReturning && !isAssignees) {
+    if (isInsert && !hasReturning && !isAssignees && !hasConflict) {
       pgSql += ' RETURNING id';
     }
     const cleanParams = params.map(p => (p === '' ? null : p));
     try {
       const res = await pool.query(pgSql, cleanParams);
       return {
-        lastID: res.rows && res.rows[0] ? res.rows[0].id : null,
+        lastID: res.rows && res.rows[0] && res.rows[0].id !== undefined ? res.rows[0].id : null,
         changes: res.rowCount
       };
     } catch (err) {

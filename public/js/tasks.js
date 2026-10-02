@@ -143,7 +143,7 @@ const Tasks = {
     }
   },
 
-  setViewMode(mode) {
+  async setViewMode(mode) {
     this.viewMode = mode;
     const btnKanban = document.getElementById('btn-view-kanban');
     const btnList = document.getElementById('btn-view-list');
@@ -155,6 +155,16 @@ const Tasks = {
     if (btnKanban) btnKanban.className = mode === 'kanban' ? activeClass : inactiveClass;
     if (btnList) btnList.className = mode === 'list' ? activeClass : inactiveClass;
     if (btnWorkload) btnWorkload.className = mode === 'workload' ? activeClass : inactiveClass;
+
+    if (mode === 'workload' && (!this.cachedUsers || this.cachedUsers.length === 0)) {
+      if (window.App && window.App.cachedUsers && window.App.cachedUsers.length > 0) {
+        this.cachedUsers = window.App.cachedUsers;
+      } else {
+        try {
+          this.cachedUsers = await apiFetch('/api/users');
+        } catch(e) {}
+      }
+    }
 
     this.renderCurrentView();
   },
@@ -416,6 +426,10 @@ const Tasks = {
     
     // Filter users based on scope
     let usersList = this.cachedUsers || [];
+    if (usersList.length === 0 && window.App && window.App.cachedUsers) {
+      usersList = window.App.cachedUsers;
+      this.cachedUsers = usersList;
+    }
     if (!isDirectorOrAdmin) {
       usersList = usersList.filter(u => u.department_id === myDeptId);
     } else if (this.filterDept) {

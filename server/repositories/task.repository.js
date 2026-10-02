@@ -151,7 +151,7 @@ const TaskRepository = {
         const isLeader = typeof a === 'object' ? (a.is_leader ? 1 : 0) : ((leaderId && uid == leaderId) ? 1 : 0);
         if (uid) {
           await db.runAsync(`
-            INSERT OR IGNORE INTO task_assignees (task_id, user_id, is_leader)
+            INSERT INTO task_assignees (task_id, user_id, is_leader)
             VALUES (?, ?, ?)
           `, [taskId, uid, isLeader]);
         }
@@ -168,7 +168,7 @@ const TaskRepository = {
       const isLeader = typeof a === 'object' ? (a.is_leader ? 1 : 0) : 0;
       if (uid) {
         await db.runAsync(`
-          INSERT OR IGNORE INTO task_assignees (task_id, user_id, is_leader)
+          INSERT INTO task_assignees (task_id, user_id, is_leader)
           VALUES (?, ?, ?)
         `, [taskId, uid, isLeader]);
       }
