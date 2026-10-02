@@ -325,11 +325,11 @@ const Tasks = {
 
         <!-- Footer Card -->
         <div class="pt-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-400">
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-1" title="Hạn chót hoàn thành">
             <i class="ph ph-calendar"></i>
-            <span class="font-mono text-[11px] ${t.status === 'overdue' ? 'text-rose-500 font-bold' : ''}">${t.due_date}</span>
+            <span class="font-mono text-[11px] ${t.status === 'overdue' ? 'text-rose-500 font-bold' : ''}">${this.formatDateDisplay(t.due_date)}</span>
           </div>
-          <div class="flex items-center gap-1.5">
+          <div class="flex items-center gap-1">
             ${t.assignees_count > 1 ? `
               <span class="text-[10px] font-bold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded">
                 👥 ${t.assignees_count}
@@ -340,6 +340,9 @@ const Tasks = {
                 <i class="ph-bold ph-user-switch"></i>
               </button>
             ` : ''}
+            <button onclick="event.stopPropagation(); Tasks.openExtendDeadlineModal(${t.id}, '${t.due_date}')" class="p-1 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950 text-amber-600" title="Gia hạn / Đổi hạn chót">
+              <i class="ph-bold ph-calendar-plus"></i>
+            </button>
             <button onclick="event.stopPropagation(); Tasks.openProgressModal(${t.id}, ${t.progress})" class="p-1 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950 text-emerald-600" title="Cập nhật tiến độ">
               <i class="ph-bold ph-gauge"></i>
             </button>
@@ -388,14 +391,17 @@ const Tasks = {
                         <span class="text-xs font-bold">${t.progress}%</span>
                       </div>
                     </td>
-                    <td class="px-6 py-4 font-mono text-xs ${t.status === 'overdue' ? 'text-rose-600 font-bold' : ''}">${t.due_date}</td>
+                    <td class="px-6 py-4 font-mono text-xs ${t.status === 'overdue' ? 'text-rose-600 font-bold' : ''}">${this.formatDateDisplay(t.due_date)}</td>
                     <td class="px-6 py-4 text-right">
-                      <div class="flex items-center justify-end gap-2">
+                      <div class="flex items-center justify-end gap-1.5">
                         ${(Auth.isDirector() || Auth.isAdmin() || (Auth.isManager() && (!t.department_id || t.department_id === Auth.user.department_id))) ? `
                           <button onclick="Tasks.openAssignModal(${t.id})" class="p-1.5 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg" title="Phân công nhân sự">
                             <i class="ph-bold ph-user-switch text-base"></i>
                           </button>
                         ` : ''}
+                        <button onclick="Tasks.openExtendDeadlineModal(${t.id}, '${t.due_date}')" class="p-1.5 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg" title="Gia hạn / Đổi hạn chót">
+                          <i class="ph-bold ph-calendar-plus text-base"></i>
+                        </button>
                         <button onclick="Tasks.openProgressModal(${t.id}, ${t.progress})" class="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg" title="Cập nhật tiến độ">
                           <i class="ph-bold ph-gauge text-base"></i>
                         </button>
@@ -1176,9 +1182,16 @@ const Tasks = {
                   <div class="text-[10px] text-slate-400 font-bold uppercase">Ngày bắt đầu</div>
                   <div class="font-bold text-xs mt-1 font-mono text-slate-800 dark:text-slate-200">${this.formatDateDisplay(task.start_date)}</div>
                 </div>
-                <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-700">
-                  <div class="text-[10px] text-slate-400 font-bold uppercase">Hạn chót</div>
-                  <div class="font-bold text-xs mt-1 font-mono ${task.status === 'overdue' ? 'text-rose-500' : 'text-slate-800 dark:text-slate-200'}">${this.formatDateDisplay(task.due_date)}</div>
+                <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                  <div>
+                    <div class="text-[10px] text-slate-400 font-bold uppercase">Hạn chót</div>
+                    <div class="font-bold text-xs mt-1 font-mono ${task.status === 'overdue' ? 'text-rose-500' : 'text-slate-800 dark:text-slate-200'}">${this.formatDateDisplay(task.due_date)}</div>
+                  </div>
+                  ${canManage ? `
+                    <button onclick="Tasks.openExtendDeadlineModal(${task.id}, '${task.due_date}')" class="p-1 text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/50 rounded-lg transition" title="Gia hạn / Đổi hạn chót">
+                      <i class="ph-bold ph-pencil-simple text-sm"></i>
+                    </button>
+                  ` : ''}
                 </div>
               </div>
 
@@ -1277,6 +1290,12 @@ const Tasks = {
                 ${canAssign ? `
                   <button onclick="Tasks.openAssignModal(${task.id})" class="px-3.5 py-2 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold rounded-xl text-xs border border-purple-200 dark:border-purple-800 transition flex items-center gap-1.5">
                     <i class="ph-bold ph-user-switch text-base"></i> Phân công nhân sự
+                  </button>
+                ` : ''}
+
+                ${canManage ? `
+                  <button onclick="Tasks.openExtendDeadlineModal(${task.id}, '${task.due_date}')" class="px-3.5 py-2 bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 font-bold rounded-xl text-xs border border-amber-200 dark:border-amber-800 transition flex items-center gap-1.5">
+                    <i class="ph-bold ph-calendar-plus text-base"></i> Gia hạn hạn chót
                   </button>
                 ` : ''}
                 
@@ -1521,6 +1540,88 @@ const Tasks = {
       this.viewTaskDetails(taskId);
     } catch (err) {
       alert('Lỗi phân công: ' + err.message);
+    }
+  },
+
+  openExtendDeadlineModal(taskId, currentDueDate) {
+    const rawDate = currentDueDate ? String(currentDueDate).split('T')[0] : new Date().toISOString().split('T')[0];
+    const modalContainer = document.getElementById('modal-container');
+    
+    modalContainer.innerHTML = `
+      <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-800/80">
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <span class="p-1.5 bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 rounded-xl">
+                <i class="ph-bold ph-calendar-plus text-xl"></i>
+              </span>
+              Gia Hạn & Điều Chỉnh Hạn Chót
+            </h3>
+            <button onclick="App.closeModal()" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700">
+              <i class="ph-bold ph-x text-lg"></i>
+            </button>
+          </div>
+
+          <form onsubmit="Tasks.submitExtendDeadline(event, ${taskId})" class="p-6 space-y-4">
+            <div class="p-3.5 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-2xl text-xs text-amber-800 dark:text-amber-300">
+              <div class="font-bold flex items-center gap-1.5 mb-1">
+                <i class="ph-bold ph-info text-base"></i> Hạn chót hiện tại: ${this.formatDateDisplay(currentDueDate)}
+              </div>
+              <p class="text-[11px] leading-relaxed text-amber-700 dark:text-amber-400">
+                Việc thay đổi hạn chót sẽ tự động ghi nhật ký tiến độ và gửi thông báo cập nhật đến tất cả cán bộ liên quan.
+              </p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1.5">
+                Ngày hạn chót mới (Deadline mới) <span class="text-red-500">*</span>
+              </label>
+              <input type="date" id="new-due-date" value="${rawDate}" required class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm font-bold dark:text-white focus:ring-2 focus:ring-amber-500">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1.5">
+                Lý do điều chỉnh / phát sinh kế hoạch <span class="text-red-500">*</span>
+              </label>
+              <textarea id="extend-reason" rows="3" required placeholder="VD: Do bổ sung thêm nội dung theo chỉ đạo mới của BGD / Chờ hoàn thiện số liệu từ các đơn vị..." class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs dark:text-white focus:ring-2 focus:ring-amber-500 leading-relaxed"></textarea>
+            </div>
+
+            <div class="pt-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-end gap-3">
+              <button type="button" onclick="App.closeModal()" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-semibold rounded-xl text-xs transition">
+                Hủy
+              </button>
+              <button type="submit" class="px-5 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs shadow-md shadow-amber-500/20 transition flex items-center gap-1.5">
+                <i class="ph-bold ph-floppy-disk text-base"></i> Xác nhận Gia hạn
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+  },
+
+  async submitExtendDeadline(e, taskId) {
+    e.preventDefault();
+    const due_date = document.getElementById('new-due-date').value;
+    const reason = document.getElementById('extend-reason').value;
+
+    try {
+      await apiFetch(`/api/tasks/${taskId}/extend-deadline`, {
+        method: 'PUT',
+        body: JSON.stringify({ due_date, reason })
+      });
+
+      if (window.showToast) {
+        showToast('success', 'Đã gia hạn và điều chỉnh hạn chót thành công!');
+      } else {
+        App.showToast('Đã gia hạn và điều chỉnh hạn chót thành công!', 'success');
+      }
+
+      App.closeModal();
+      await this.loadTasks();
+      this.viewTaskDetails(taskId);
+    } catch (err) {
+      alert('Lỗi gia hạn: ' + err.message);
     }
   },
 

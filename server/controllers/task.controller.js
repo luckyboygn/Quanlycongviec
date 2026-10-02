@@ -247,6 +247,74 @@ const TaskController = {
     } catch (err) {
       res.status(500).json({ error: 'Lỗi thêm nhật ký tiến độ' });
     }
+  },
+
+  async extendDeadline(req, res) {
+    try {
+      const taskId = parseInt(req.params.id);
+      const { due_date, reason } = req.body;
+      if (!due_date) {
+        return res.status(400).json({ error: 'Vui lòng chọn ngày hạn chót mới' });
+      }
+
+      const task = await TaskRepository.findById(taskId);
+      if (!task) return res.status(404).json({ error: 'Không tìm thấy công việc' });
+
+      // Permission check: Director, Admin, Manager of the task's department, Creator, or Leader
+      const isDirectorOrAdmin = req.user.role === 'director' || req.user.role === 'admin';
+      const isManagerOfDept = req.user.role === 'manager' && req.user.department_id === task.department_id;
+      const isCreator = req.user.id === task.created_by;
+      const isLeader = task.assignees && task.assignees.some(a => a.id === req.user.id && a.is_leader);
+
+      if (!isDirectorOrAdmin && !isManagerOfDept && !isCreator && !isLeader) {
+        return res.status(403).json({ error: 'Bạn không có quyền điều chỉnh hạn chót cho công việc này' });
+      }
+
+      const oldDueDate = task.due_date ? String(task.due_date).split('T')[0] : 'Chưa thiết lập';
+      const newDueDate = String(due_date).split('T')[0];
+
+      // Auto update status if task was overdue but new date is today or in future
+      let newStatus = task.status;
+      const today = new Date().toISOString().split('T')[0];
+      if (task.status === 'overdue' && newDueDate >= today) {
+        newStatus = task.progress > 0 ? 'in_progress' : 'pending';
+      }
+
+      const db = require('../database/connection');
+      await db.runAsync(`
+        UPDATE tasks 
+        SET due_date = ?, status = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `, [newDueDate, newStatus, taskId]);
+
+      // Add audit log to task_logs
+      const logNote = `[Gia hạn / Điều chỉnh hạn chót] Thay đổi hạn chót từ ${oldDueDate} sang ${newDueDate}.${reason ? ` Lý do: ${reason.trim()}` : ''}`;
+      await TaskRepository.addLog(taskId, req.user.id, today, task.progress || 0, logNote);
+
+      // Log Activity
+      const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+      await logActivity(req.user.id, req.user.full_name, 'EXTEND_DEADLINE', 'tasks', taskId, `Gia hạn công việc "${task.title}" đến ${newDueDate}`, clientIp);
+
+      // Send notifications to assignees
+      if (task.assignees && task.assignees.length > 0) {
+        for (const a of task.assignees) {
+          if (a.id !== req.user.id) {
+            await createNotification(
+              a.id,
+              'Điều chỉnh hạn chót công việc',
+              `${req.user.full_name} đã điều chỉnh hạn chót công việc "${task.title}" sang ngày ${newDueDate}.${reason ? ` Lý do: ${reason.trim()}` : ''}`,
+              'task_extended',
+              taskId
+            );
+          }
+        }
+      }
+
+      const updated = await TaskRepository.findById(taskId);
+      res.json(updated);
+    } catch (err) {
+      res.status(500).json({ error: 'Lỗi điều chỉnh hạn chót: ' + err.message });
+    }
   }
 };
 
