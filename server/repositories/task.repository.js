@@ -132,7 +132,7 @@ const TaskRepository = {
     return task;
   },
 
-  async create(taskData, assigneeIds = [], leaderId = null) {
+  async create(taskData, assignees = [], leaderId = null) {
     const res = await db.runAsync(`
       INSERT INTO tasks (title, description, department_id, created_by, priority, status, progress, start_date, due_date, attachment_links)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -145,15 +145,35 @@ const TaskRepository = {
 
     const taskId = res.lastID;
 
-    for (const uid of assigneeIds) {
-      const isLeader = (leaderId && uid == leaderId) ? 1 : 0;
-      await db.runAsync(`
-        INSERT OR IGNORE INTO task_assignees (task_id, user_id, is_leader)
-        VALUES (?, ?, ?)
-      `, [taskId, uid, isLeader]);
+    if (Array.isArray(assignees) && assignees.length > 0) {
+      for (const a of assignees) {
+        const uid = typeof a === 'object' ? a.user_id : parseInt(a);
+        const isLeader = typeof a === 'object' ? (a.is_leader ? 1 : 0) : ((leaderId && uid == leaderId) ? 1 : 0);
+        if (uid) {
+          await db.runAsync(`
+            INSERT OR IGNORE INTO task_assignees (task_id, user_id, is_leader)
+            VALUES (?, ?, ?)
+          `, [taskId, uid, isLeader]);
+        }
+      }
     }
 
     return taskId;
+  },
+
+  async updateAssignees(taskId, assigneesList = []) {
+    await db.runAsync('DELETE FROM task_assignees WHERE task_id = ?', [taskId]);
+    for (const a of assigneesList) {
+      const uid = typeof a === 'object' ? a.user_id : parseInt(a);
+      const isLeader = typeof a === 'object' ? (a.is_leader ? 1 : 0) : 0;
+      if (uid) {
+        await db.runAsync(`
+          INSERT OR IGNORE INTO task_assignees (task_id, user_id, is_leader)
+          VALUES (?, ?, ?)
+        `, [taskId, uid, isLeader]);
+      }
+    }
+    return await this.findById(taskId);
   },
 
   async update(id, taskData, assigneeIds = null, leaderId = null) {
@@ -173,20 +193,25 @@ const TaskRepository = {
           start_date = ?, due_date = ?, completed_at = ?, attachment_links = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `, [
-      taskData.title, taskData.description || null, taskData.department_id,
-      taskData.priority, taskData.status, taskData.progress,
-      taskData.start_date, taskData.due_date, completedAt,
-      JSON.stringify(taskData.attachment_links || []), id
+      taskData.title !== undefined ? taskData.title : current.title,
+      taskData.description !== undefined ? taskData.description : current.description,
+      taskData.department_id !== undefined ? taskData.department_id : current.department_id,
+      taskData.priority !== undefined ? taskData.priority : current.priority,
+      taskData.status !== undefined ? taskData.status : current.status,
+      taskData.progress !== undefined ? taskData.progress : current.progress,
+      taskData.start_date !== undefined ? taskData.start_date : current.start_date,
+      taskData.due_date !== undefined ? taskData.due_date : current.due_date,
+      completedAt,
+      JSON.stringify(taskData.attachment_links !== undefined ? taskData.attachment_links : (current.attachment_links || [])),
+      id
     ]);
 
     if (assigneeIds !== null) {
-      await db.runAsync('DELETE FROM task_assignees WHERE task_id = ?', [id]);
-      for (const uid of assigneeIds) {
-        const isLeader = (leaderId && uid == leaderId) ? 1 : 0;
-        await db.runAsync(`
-          INSERT OR IGNORE INTO task_assignees (task_id, user_id, is_leader)
-          VALUES (?, ?, ?)
-        `, [id, uid, isLeader]);
+      if (Array.isArray(assigneeIds)) {
+        await this.updateAssignees(id, assigneeIds.map(a => {
+          if (typeof a === 'object') return a;
+          return { user_id: parseInt(a), is_leader: (leaderId && parseInt(a) === parseInt(leaderId)) ? 1 : 0 };
+        }));
       }
     }
 

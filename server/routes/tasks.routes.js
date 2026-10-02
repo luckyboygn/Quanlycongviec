@@ -7,6 +7,7 @@ router.get('/', authenticateToken, TaskController.getAll);
 router.get('/:id', authenticateToken, TaskController.getById);
 router.post('/', authenticateToken, TaskController.create);
 router.put('/:id', authenticateToken, TaskController.update);
+router.put('/:id/assign', authenticateToken, TaskController.assignTask);
 router.put('/:id/progress', authenticateToken, TaskController.updateProgress);
 router.delete('/:id', authenticateToken, TaskController.delete);
 router.post('/:id/logs', authenticateToken, TaskController.addLog);

@@ -325,6 +325,11 @@ const Tasks = {
                 👥 ${t.assignees_count}
               </span>
             ` : ''}
+            ${(Auth.isDirector() || Auth.isAdmin() || (Auth.isManager() && (!t.department_id || t.department_id === Auth.user.department_id))) ? `
+              <button onclick="event.stopPropagation(); Tasks.openAssignModal(${t.id})" class="p-1 rounded-lg hover:bg-purple-50 dark:hover:bg-purple-950 text-purple-600" title="Phân công nhân sự">
+                <i class="ph-bold ph-user-switch"></i>
+              </button>
+            ` : ''}
             <button onclick="event.stopPropagation(); Tasks.openProgressModal(${t.id}, ${t.progress})" class="p-1 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950 text-emerald-600" title="Cập nhật tiến độ">
               <i class="ph-bold ph-gauge"></i>
             </button>
@@ -376,6 +381,11 @@ const Tasks = {
                     <td class="px-6 py-4 font-mono text-xs ${t.status === 'overdue' ? 'text-rose-600 font-bold' : ''}">${t.due_date}</td>
                     <td class="px-6 py-4 text-right">
                       <div class="flex items-center justify-end gap-2">
+                        ${(Auth.isDirector() || Auth.isAdmin() || (Auth.isManager() && (!t.department_id || t.department_id === Auth.user.department_id))) ? `
+                          <button onclick="Tasks.openAssignModal(${t.id})" class="p-1.5 text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg" title="Phân công nhân sự">
+                            <i class="ph-bold ph-user-switch text-base"></i>
+                          </button>
+                        ` : ''}
                         <button onclick="Tasks.openProgressModal(${t.id}, ${t.progress})" class="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-lg" title="Cập nhật tiến độ">
                           <i class="ph-bold ph-gauge text-base"></i>
                         </button>
@@ -1103,6 +1113,7 @@ const Tasks = {
       const isCreator = (task.created_by == Auth.user.id);
       const isAssignee = task.assignees && task.assignees.some(a => a.id == Auth.user.id);
       const canManage = isCreator || isAssignee || Auth.isManager() || Auth.isDirector() || Auth.isAdmin();
+      const canAssign = Auth.isDirector() || Auth.isAdmin() || (Auth.isManager() && (!task.department_id || task.department_id === Auth.user.department_id)) || isCreator;
 
       const priorityLabels = {
         urgent: '<span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300">🔴 Khẩn cấp</span>',
@@ -1176,7 +1187,14 @@ const Tasks = {
 
               <!-- Assignees -->
               <div>
-                <h4 class="text-xs font-bold uppercase text-slate-400 mb-2">Nhân sự thực hiện (${task.assignees ? task.assignees.length : 0})</h4>
+                <div class="flex items-center justify-between mb-2">
+                  <h4 class="text-xs font-bold uppercase text-slate-400">Nhân sự thực hiện (${task.assignees ? task.assignees.length : 0})</h4>
+                  ${canAssign ? `
+                    <button onclick="Tasks.openAssignModal(${task.id})" class="text-xs font-bold text-purple-600 hover:text-purple-700 dark:text-purple-400 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800 transition">
+                      <i class="ph-bold ph-user-switch text-sm"></i> Phân công / Giao việc
+                    </button>
+                  ` : ''}
+                </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   ${(task.assignees || []).map(a => `
                     <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-2xl border border-slate-200 dark:border-slate-700 flex items-center justify-between">
@@ -1239,6 +1257,12 @@ const Tasks = {
                 <button onclick="App.closeModal()" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition">
                   Đóng
                 </button>
+
+                ${canAssign ? `
+                  <button onclick="Tasks.openAssignModal(${task.id})" class="px-3.5 py-2 bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-bold rounded-xl text-xs border border-purple-200 dark:border-purple-800 transition flex items-center gap-1.5">
+                    <i class="ph-bold ph-user-switch text-base"></i> Phân công nhân sự
+                  </button>
+                ` : ''}
                 
                 ${canManage ? `
                   <button onclick="Tasks.openProgressModal(${task.id}, ${task.progress})" class="px-3.5 py-2 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-bold rounded-xl text-xs border border-blue-200 dark:border-blue-800 transition flex items-center gap-1.5">
@@ -1263,6 +1287,224 @@ const Tasks = {
       `;
     } catch (err) {
       alert(err.message);
+    }
+  },
+
+  async openAssignModal(taskId) {
+    try {
+      const task = await apiFetch(`/api/tasks/${taskId}`);
+      if (!task) return;
+
+      if (!this.cachedUsers || this.cachedUsers.length === 0 || !this.cachedDepartments || this.cachedDepartments.length === 0) {
+        const [departments, users] = await Promise.all([
+          apiFetch('/api/departments'),
+          apiFetch('/api/users')
+        ]);
+        this.cachedDepartments = departments;
+        this.cachedUsers = users;
+      }
+
+      const isDirectorOrAdmin = Auth.isDirector() || Auth.isAdmin();
+      const taskDeptId = task.department_id;
+      const dept = this.cachedDepartments.find(d => d.id === taskDeptId);
+      const deptName = dept ? dept.name : (task.department_name || 'Phòng ban');
+
+      // Users available for assignment:
+      const usersInDept = this.cachedUsers.filter(u => u.department_id === taskDeptId);
+      const otherUsers = this.cachedUsers.filter(u => u.department_id !== taskDeptId);
+
+      // Current assignees
+      const currentAssigneeIds = (task.assignees || []).map(a => a.id);
+      const currentLeader = (task.assignees || []).find(a => a.is_leader);
+      const currentLeaderId = currentLeader ? currentLeader.id : (task.assignees && task.assignees[0] ? task.assignees[0].id : null);
+
+      const modalContainer = document.getElementById('modal-container');
+      modalContainer.innerHTML = `
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-700">
+            <!-- Header -->
+            <div class="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between sticky top-0 bg-white dark:bg-slate-800 z-10">
+              <div class="flex items-center gap-3">
+                <span class="p-2.5 bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 rounded-2xl">
+                  <i class="ph-bold ph-user-switch text-xl"></i>
+                </span>
+                <div>
+                  <h3 class="text-lg font-bold text-slate-800 dark:text-white">Phân công nhân sự & Giao việc</h3>
+                  <p class="text-xs text-slate-400 font-medium">${deptName} • Hạn chót: ${this.formatDateDisplay(task.due_date)}</p>
+                </div>
+              </div>
+              <button onclick="App.closeModal()" class="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-700">
+                <i class="ph-bold ph-x text-lg"></i>
+              </button>
+            </div>
+
+            <!-- Task Info Brief -->
+            <form onsubmit="Tasks.submitAssignTask(event, ${taskId})" class="p-6 space-y-5">
+              <div class="p-4 bg-slate-50 dark:bg-slate-700/40 rounded-2xl border border-slate-200 dark:border-slate-700">
+                <div class="text-xs text-slate-400 font-bold uppercase mb-1">Công việc cần phân công:</div>
+                <div class="font-bold text-sm text-slate-800 dark:text-white leading-snug">${task.title}</div>
+                ${task.description ? `<div class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">${task.description}</div>` : ''}
+              </div>
+
+              <!-- Step 1: Chọn Người phụ trách chính (Chủ trì) -->
+              <div>
+                <label class="block text-xs font-extrabold uppercase text-slate-600 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <span class="w-5 h-5 rounded-full bg-amber-500 text-white text-[11px] font-black flex items-center justify-center">1</span>
+                  Người Phụ Trách Chính (Chủ Trì) <span class="text-red-500">*</span>
+                </label>
+                <select id="assign-leader-select" required onchange="Tasks.handleLeaderChange(this.value)" class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 dark:text-white font-bold">
+                  <option value="">-- Chọn 01 Cán bộ chủ trì --</option>
+                  <optgroup label="Cán bộ ${deptName}">
+                    ${usersInDept.map(u => `
+                      <option value="${u.id}" ${u.id === currentLeaderId ? 'selected' : ''}>${u.full_name} (${u.position || 'Cán bộ'})</option>
+                    `).join('')}
+                  </optgroup>
+                  ${isDirectorOrAdmin && otherUsers.length > 0 ? `
+                    <optgroup label="Cán bộ phòng ban khác (BGD chỉ định)">
+                      ${otherUsers.map(u => `
+                        <option value="${u.id}" ${u.id === currentLeaderId ? 'selected' : ''}>${u.full_name} (${u.department_code || ''} - ${u.position || 'Cán bộ'})</option>
+                      `).join('')}
+                    </optgroup>
+                  ` : ''}
+                </select>
+                <p class="text-[11px] text-slate-400 mt-1">Cán bộ chủ trì chịu trách nhiệm chính về chất lượng và tiến độ hoàn thành công việc.</p>
+              </div>
+
+              <!-- Step 2: Chọn Người phối hợp -->
+              <div>
+                <label class="block text-xs font-extrabold uppercase text-slate-600 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <span class="w-5 h-5 rounded-full bg-blue-500 text-white text-[11px] font-black flex items-center justify-center">2</span>
+                  Người Phối Hợp Thực Hiện (Tùy chọn)
+                </label>
+                <div class="p-3 bg-slate-50 dark:bg-slate-700/50 border border-slate-200 dark:border-slate-600 rounded-xl max-h-52 overflow-y-auto space-y-1.5" id="collaborators-container">
+                  ${usersInDept.map(u => {
+                    const isChecked = currentAssigneeIds.includes(u.id) && u.id !== currentLeaderId;
+                    const isLeader = u.id === currentLeaderId;
+                    return `
+                      <label class="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/60 cursor-pointer border border-slate-200 dark:border-slate-700 transition ${isLeader ? 'opacity-40 cursor-not-allowed' : ''}">
+                        <div class="flex items-center gap-2.5">
+                          <input type="checkbox" name="assign_collaborators" value="${u.id}" ${isChecked ? 'checked' : ''} ${isLeader ? 'disabled' : ''} class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer">
+                          <div>
+                            <div class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                              <span>${u.full_name}</span>
+                              ${isLeader ? '<span class="text-[9px] bg-amber-100 text-amber-800 px-1.5 py-0.2 rounded font-bold">Chủ trì</span>' : ''}
+                            </div>
+                            <div class="text-[10px] text-slate-400">${u.position || 'Cán bộ'}</div>
+                          </div>
+                        </div>
+                        <span class="text-[10px] text-slate-500 font-medium px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700">Phối hợp</span>
+                      </label>
+                    `;
+                  }).join('')}
+
+                  ${isDirectorOrAdmin && otherUsers.length > 0 ? `
+                    <div class="text-[10px] font-bold text-slate-400 uppercase pt-2 pb-1 border-t border-slate-200 dark:border-slate-600">Cán bộ phòng ban khác:</div>
+                    ${otherUsers.map(u => {
+                      const isChecked = currentAssigneeIds.includes(u.id) && u.id !== currentLeaderId;
+                      const isLeader = u.id === currentLeaderId;
+                      return `
+                        <label class="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700/60 cursor-pointer border border-slate-200 dark:border-slate-700 transition ${isLeader ? 'opacity-40 cursor-not-allowed' : ''}">
+                          <div class="flex items-center gap-2.5">
+                            <input type="checkbox" name="assign_collaborators" value="${u.id}" ${isChecked ? 'checked' : ''} ${isLeader ? 'disabled' : ''} class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer">
+                            <div>
+                              <div class="text-xs font-bold text-slate-800 dark:text-white">${u.full_name}</div>
+                              <div class="text-[10px] text-slate-400">${u.department_code || ''} • ${u.position || 'Cán bộ'}</div>
+                            </div>
+                          </div>
+                          <span class="text-[10px] text-slate-500 font-medium px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700">Phối hợp</span>
+                        </label>
+                      `;
+                    }).join('')}
+                  ` : ''}
+                </div>
+              </div>
+
+              <!-- Step 3: Ý kiến chỉ đạo / Ghi chú phân công -->
+              <div>
+                <label class="block text-xs font-extrabold uppercase text-slate-600 dark:text-slate-300 mb-1.5 flex items-center gap-1.5">
+                  <span class="w-5 h-5 rounded-full bg-emerald-500 text-white text-[11px] font-black flex items-center justify-center">3</span>
+                  Ý Kiến Chỉ Đạo / Ghi Chú Giao Nhiệm Vụ (Tùy chọn)
+                </label>
+                <textarea id="assign-delegation-note" rows="2" placeholder="VD: Đ/c Ngọc làm đầu mối tổng hợp, đ/c Hương hỗ trợ rà soát trước ngày 20..." class="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl text-xs dark:text-white focus:ring-2 focus:ring-emerald-500"></textarea>
+              </div>
+
+              <!-- Actions -->
+              <div class="pt-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-end gap-3">
+                <button type="button" onclick="App.closeModal()" class="px-5 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-semibold rounded-xl text-xs transition">
+                  Hủy bỏ
+                </button>
+                <button type="submit" class="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl text-xs shadow-md shadow-purple-600/20 transition flex items-center gap-2">
+                  <i class="ph-bold ph-check-circle text-base"></i> Lưu Phân Công & Gửi Thông Báo
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+    } catch (err) {
+      alert('Lỗi mở phân công: ' + err.message);
+    }
+  },
+
+  handleLeaderChange(leaderId) {
+    const leaderVal = parseInt(leaderId);
+    const checkboxes = document.querySelectorAll('input[name="assign_collaborators"]');
+    checkboxes.forEach(cb => {
+      const cbVal = parseInt(cb.value);
+      if (cbVal === leaderVal) {
+        cb.checked = false;
+        cb.disabled = true;
+        const parentLabel = cb.closest('label');
+        if (parentLabel) parentLabel.classList.add('opacity-40', 'cursor-not-allowed');
+      } else {
+        cb.disabled = false;
+        const parentLabel = cb.closest('label');
+        if (parentLabel) parentLabel.classList.remove('opacity-40', 'cursor-not-allowed');
+      }
+    });
+  },
+
+  async submitAssignTask(e, taskId) {
+    e.preventDefault();
+    try {
+      const leaderSelect = document.getElementById('assign-leader-select');
+      const leaderId = leaderSelect ? parseInt(leaderSelect.value) : null;
+      if (!leaderId) {
+        alert('Vui lòng chọn 01 Cán bộ phụ trách chính (Chủ trì).');
+        return;
+      }
+
+      const collaboratorCheckboxes = Array.from(document.querySelectorAll('input[name="assign_collaborators"]:checked'));
+      const collaboratorIds = collaboratorCheckboxes.map(cb => parseInt(cb.value)).filter(id => id !== leaderId);
+
+      const assignees = [
+        { user_id: leaderId, is_leader: 1 },
+        ...collaboratorIds.map(id => ({ user_id: id, is_leader: 0 }))
+      ];
+
+      const noteEl = document.getElementById('assign-delegation-note');
+      const delegation_note = noteEl ? noteEl.value : '';
+
+      await apiFetch(`/api/tasks/${taskId}/assign`, {
+        method: 'PUT',
+        body: JSON.stringify({
+          assignees,
+          leader_id: leaderId,
+          delegation_note
+        })
+      });
+
+      if (window.showToast) {
+        showToast('success', 'Phân công nhân sự & giao việc thành công!');
+      } else {
+        App.showToast('Phân công nhân sự & giao việc thành công!', 'success');
+      }
+
+      App.closeModal();
+      await this.loadTasks();
+      this.viewTaskDetails(taskId);
+    } catch (err) {
+      alert('Lỗi phân công: ' + err.message);
     }
   },
 
