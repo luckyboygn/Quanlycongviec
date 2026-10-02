@@ -960,7 +960,9 @@ const Tasks = {
           priority,
           start_date,
           due_date,
-          assignees: checkedAssignees
+          assignees: checkedAssignees,
+          assignee_ids: checkedAssignees.map(a => a.user_id),
+          leader_id: checkedAssignees[0] ? checkedAssignees[0].user_id : null
         })
       });
 

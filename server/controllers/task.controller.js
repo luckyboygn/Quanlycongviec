@@ -46,6 +46,21 @@ const TaskController = {
         }));
       }
 
+      // If no specific assignees selected (e.g. BGĐ assigns to entire department), auto-assign to the Department Manager
+      if (parsedAssignees.length === 0 && deptId) {
+        const db = require('../database/connection');
+        const deptManager = await db.getAsync(`
+          SELECT id, full_name, role, position FROM users 
+          WHERE department_id = ? AND (role = 'manager' OR position LIKE '%Trưởng phòng%' OR position LIKE '%Phó phòng%')
+          ORDER BY CASE WHEN position LIKE '%Trưởng phòng%' THEN 1 WHEN role = 'manager' THEN 2 ELSE 3 END, id ASC
+          LIMIT 1
+        `, [deptId]);
+
+        if (deptManager) {
+          parsedAssignees.push({ user_id: deptManager.id, is_leader: 1 });
+        }
+      }
+
       const taskId = await TaskRepository.create({
         title, description, department_id: deptId, created_by: req.user.id,
         priority: priority || 'medium', start_date, due_date, attachment_links: attachment_links || []
