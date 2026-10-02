@@ -434,7 +434,7 @@ const Tasks = {
     const statsList = usersList.map(u => {
       // Find all tasks assigned to this user in cachedTasks
       const assignedTasks = this.cachedTasks.filter(t => 
-        t.assignees && t.assignees.some(a => a.id === u.id)
+        t.assignees && t.assignees.some(a => (a.id == u.id || parseInt(a.id) === parseInt(u.id)))
       );
 
       const total = assignedTasks.length;
@@ -654,7 +654,7 @@ const Tasks = {
     if (!user) return;
 
     const assignedTasks = this.cachedTasks.filter(t => 
-      t.assignees && t.assignees.some(a => a.id === userId)
+      t.assignees && t.assignees.some(a => (a.id == userId || parseInt(a.id) === parseInt(userId)))
     );
 
     const modalContainer = document.getElementById('modal-container');
