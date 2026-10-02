@@ -472,10 +472,30 @@ const App = {
 
       <!-- LỊCH CÔNG VIỆC - MINI CALENDAR TẠI DƯỚI CÙNG GÓC TRÁI -->
       <div id="sidebar-mini-calendar" class="p-3 pt-1 shrink-0"></div>
+
+      <!-- App Version Footer -->
+      <div class="px-4 py-2 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+        <span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> <span id="sidebar-version-commit" class="font-bold text-slate-600 dark:text-slate-300">...</span></span>
+        <span id="sidebar-version-date" class="text-slate-400">...</span>
+      </div>
     `;
 
     if (window.Calendar) Calendar.renderSidebarMiniCalendar();
     if (window.Chat) Chat.updateUnreadBadges();
+    this.loadSidebarVersion();
+  },
+
+  async loadSidebarVersion() {
+    try {
+      const res = await fetch('/api/auth/version');
+      if (res.ok) {
+        const data = await res.json();
+        const cEl = document.getElementById('sidebar-version-commit');
+        const dEl = document.getElementById('sidebar-version-date');
+        if (cEl && data.commit) cEl.innerText = 'v_' + data.commit;
+        if (dEl && data.commitDate) dEl.innerText = data.commitDate;
+      }
+    } catch(e) {}
   },
 
   toggleMobileSidebar() {

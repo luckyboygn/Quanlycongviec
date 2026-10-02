@@ -98,6 +98,56 @@ const AuthController = {
     } catch (err) {
       res.status(400).json({ error: err.message });
     }
+  },
+
+  getVersion(req, res) {
+    try {
+      let commit = 'fe9b200';
+      let commitDate = '02/10/2026 10:25';
+      let branch = 'main';
+
+      try {
+        const { execSync } = require('child_process');
+        const gitCommit = execSync('git rev-parse --short HEAD').toString().trim();
+        if (gitCommit) commit = gitCommit;
+
+        const rawDate = execSync('git log -1 --format=%cd --date=iso').toString().trim();
+        if (rawDate) {
+          const d = new Date(rawDate);
+          if (!isNaN(d.getTime())) {
+            const day = String(d.getDate()).padStart(2, '0');
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const year = d.getFullYear();
+            const hours = String(d.getHours()).padStart(2, '0');
+            const mins = String(d.getMinutes()).padStart(2, '0');
+            commitDate = `${day}/${month}/${year} ${hours}:${mins}`;
+          }
+        }
+        const gitBranch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
+        if (gitBranch) branch = gitBranch;
+      } catch (e) {
+        try {
+          const vFile = require('../../version.json');
+          if (vFile.commit) commit = vFile.commit;
+          if (vFile.commitDate) commitDate = vFile.commitDate;
+          if (vFile.branch) branch = vFile.branch;
+        } catch (err) {}
+      }
+
+      res.json({
+        commit,
+        commitDate,
+        branch,
+        version: '2.5.0'
+      });
+    } catch (err) {
+      res.json({
+        commit: 'fe9b200',
+        commitDate: '02/10/2026 10:25',
+        branch: 'main',
+        version: '2.5.0'
+      });
+    }
   }
 };
 

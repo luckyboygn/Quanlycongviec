@@ -3,6 +3,7 @@ const router = express.Router();
 const AuthController = require('../controllers/auth.controller');
 const authenticateToken = require('../middleware/auth.middleware');
 
+router.get('/version', AuthController.getVersion);
 router.post('/login', AuthController.login);
 router.post('/quick-switch', AuthController.quickSwitch);
 router.post('/switch-my-role', AuthController.switchMyRole);

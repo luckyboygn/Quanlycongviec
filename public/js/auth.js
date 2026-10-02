@@ -566,11 +566,41 @@ const Auth = {
             </div>
           </div>
         </div>
+
+        <!-- System Version & Commit Info in Bottom Corner -->
+        <div id="login-version-container" class="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-emerald-500/40 text-slate-300 text-[11px] font-mono backdrop-blur-md shadow-2xl select-none group hover:border-emerald-400 transition-all">
+          <span class="relative flex h-2 w-2">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span class="text-slate-400 font-sans">Bản:</span>
+          <span id="login-version-commit" class="text-emerald-400 font-extrabold tracking-wider">fe9b200</span>
+          <span class="text-slate-600 font-sans">•</span>
+          <span class="text-slate-400 font-sans">Cập nhật:</span>
+          <span id="login-version-date" class="text-amber-300 font-semibold font-mono">02/10/2026 10:25</span>
+        </div>
       </div>
     `;
 
+    this.loadVersionBadge();
+
     if (urlParams.get('open_contact') === '1') {
       this.showContactModal();
+    }
+  },
+
+  async loadVersionBadge() {
+    try {
+      const res = await fetch('/api/auth/version');
+      if (res.ok) {
+        const data = await res.json();
+        const commitEl = document.getElementById('login-version-commit');
+        const dateEl = document.getElementById('login-version-date');
+        if (commitEl && data.commit) commitEl.innerText = data.commit;
+        if (dateEl && data.commitDate) dateEl.innerText = data.commitDate;
+      }
+    } catch (e) {
+      console.warn('Could not load version badge:', e);
     }
   },
 
