@@ -564,20 +564,29 @@ const Auth = {
             <div class="text-center pt-2 border-t border-slate-800/80 text-[11px] text-slate-500">
               🔒 Cổng thông tin nội bộ - Trường Đào tạo cán bộ Agribank
             </div>
+
+            <!-- Version Info right inside the card footer -->
+            <div class="pt-2 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+              <span class="flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>Bản commit: <b id="card-version-commit" class="text-emerald-400 font-bold">2eaf034</b></span>
+              </span>
+              <span id="card-version-date" class="text-slate-400">02/10/2026 10:50</span>
+            </div>
           </div>
         </div>
 
         <!-- System Version & Commit Info in Bottom Corner -->
-        <div id="login-version-container" class="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-emerald-500/40 text-slate-300 text-[11px] font-mono backdrop-blur-md shadow-2xl select-none group hover:border-emerald-400 transition-all">
+        <div id="login-version-container" class="fixed bottom-3 right-3 sm:bottom-4 sm:right-4 z-50 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900/95 border border-emerald-500/50 text-slate-300 text-[11px] font-mono backdrop-blur-md shadow-2xl select-none group hover:border-emerald-400 transition-all">
           <span class="relative flex h-2 w-2">
             <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
           </span>
           <span class="text-slate-400 font-sans">Bản:</span>
-          <span id="login-version-commit" class="text-emerald-400 font-extrabold tracking-wider">fe9b200</span>
+          <span id="login-version-commit" class="text-emerald-400 font-extrabold tracking-wider">2eaf034</span>
           <span class="text-slate-600 font-sans">•</span>
           <span class="text-slate-400 font-sans">Cập nhật:</span>
-          <span id="login-version-date" class="text-amber-300 font-semibold font-mono">02/10/2026 10:25</span>
+          <span id="login-version-date" class="text-amber-300 font-semibold font-mono">02/10/2026 10:50</span>
         </div>
       </div>
     `;
@@ -596,8 +605,12 @@ const Auth = {
         const data = await res.json();
         const commitEl = document.getElementById('login-version-commit');
         const dateEl = document.getElementById('login-version-date');
+        const cardCommitEl = document.getElementById('card-version-commit');
+        const cardDateEl = document.getElementById('card-version-date');
         if (commitEl && data.commit) commitEl.innerText = data.commit;
         if (dateEl && data.commitDate) dateEl.innerText = data.commitDate;
+        if (cardCommitEl && data.commit) cardCommitEl.innerText = data.commit;
+        if (cardDateEl && data.commitDate) cardDateEl.innerText = data.commitDate;
       }
     } catch (e) {
       console.warn('Could not load version badge:', e);
